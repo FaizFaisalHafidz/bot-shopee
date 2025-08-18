@@ -21,9 +21,20 @@ try:
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.common.exceptions import TimeoutException, WebDriverException
+    
+    # Try to import webdriver-manager for automatic ChromeDriver management
+    try:
+        from selenium.webdriver.chrome.service import Service
+        from webdriver_manager.chrome import ChromeDriverManager
+        WEBDRIVER_MANAGER_AVAILABLE = True
+        print("✅ webdriver-manager available - Auto ChromeDriver management enabled")
+    except ImportError:
+        WEBDRIVER_MANAGER_AVAILABLE = False
+        print("⚠️  webdriver-manager not available - Using system ChromeDriver")
+        
 except ImportError:
     print("❌ Selenium not installed!")
-    print("💡 Install with: pip install selenium")
+    print("💡 Install with: pip install selenium webdriver-manager")
     sys.exit(1)
 
 class ShopeeBot:
@@ -111,8 +122,37 @@ class ShopeeBot:
             ]
             chrome_options.add_argument(f'--user-agent={random.choice(user_agents)}')
             
-            # Create driver
-            driver = webdriver.Chrome(options=chrome_options)
+            # Create driver with automatic ChromeDriver management
+            try:
+                if WEBDRIVER_MANAGER_AVAILABLE:
+                    # Use webdriver-manager for automatic ChromeDriver download
+                    service = Service(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                else:
+                    # Fallback to system ChromeDriver
+                    driver = webdriver.Chrome(options=chrome_options)
+            except Exception as e:
+                print(f"⚠️  ChromeDriver version issue detected: {str(e)}")
+                print("💡 Trying alternative ChromeDriver setup...")
+                
+                # Try with explicit executable path
+                chrome_paths = [
+                    './chromedriver.exe',
+                    'C:\\Windows\\System32\\chromedriver.exe',
+                    'chromedriver.exe'
+                ]
+                
+                driver = None
+                for chrome_path in chrome_paths:
+                    try:
+                        if os.path.exists(chrome_path):
+                            driver = webdriver.Chrome(executable_path=chrome_path, options=chrome_options)
+                            break
+                    except:
+                        continue
+                
+                if not driver:
+                    raise WebDriverException("No compatible ChromeDriver found")
             
             # Anti-detection script
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -136,7 +176,11 @@ class ShopeeBot:
             
         except WebDriverException as e:
             print(f"❌ Error creating Chrome driver: {e}")
-            print("💡 Make sure ChromeDriver is installed and in PATH")
+            if "This version of ChromeDriver only supports Chrome version" in str(e):
+                print("💡 SOLUTION: Run fix_chromedriver_version.bat to download compatible ChromeDriver")
+                print("💡 Or install webdriver-manager: pip install webdriver-manager")
+            else:
+                print("💡 Make sure ChromeDriver is installed and compatible with Chrome version")
             return None
         except Exception as e:
             print(f"❌ Unexpected error: {e}")
