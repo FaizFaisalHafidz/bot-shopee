@@ -121,14 +121,14 @@ class ShopeeBot:
         if input_text.isdigit():
             return input_text
         
-        # Format 1: https://live.shopee.co.id/12345678
-        pattern1 = r'https://live\.shopee\.co\.id/(\d+)'
+        # Format 1: https://live.shopee.co.id/share?from=live&session=12345678
+        pattern1 = r'[?&]session=(\d+)'
         match1 = re.search(pattern1, input_text)
         if match1:
             return match1.group(1)
         
-        # Format 2: https://live.shopee.co.id/share?...&session=12345678&...
-        pattern2 = r'[?&]session=(\d+)'
+        # Format 2: https://live.shopee.co.id/12345678 (legacy format)
+        pattern2 = r'https://live\.shopee\.co\.id/(\d+)'
         match2 = re.search(pattern2, input_text)
         if match2:
             return match2.group(1)
@@ -139,6 +139,8 @@ class ShopeeBot:
         if match3:
             return match3.group(1)
         
+        return None
+        
     def get_live_info(self, session_id):
         """Mendapatkan informasi live streaming dengan API yang benar"""
         url = f"https://live.shopee.co.id/api/v1/session/{session_id}"
@@ -148,7 +150,7 @@ class ShopeeBot:
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'id,en-US;q=0.9,en;q=0.8',
             'Client-Info': 'os=2;platform=9;scene_id=17;language=id;device_id=9c968575-05a6-4a5b-85df-d7ea4bbc31bf',
-            'Referer': f'https://live.shopee.co.id/share?session={session_id}',
+            'Referer': f'https://live.shopee.co.id/share?from=live&session={session_id}',
         })
         
         try:
@@ -233,7 +235,7 @@ class ShopeeBot:
         session = requests.Session()
         
         # Access live page multiple times untuk simulate viewer
-        live_url = f"https://live.shopee.co.id/share?session={session_id}"
+        live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
         
         headers = {
             'User-Agent': f'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(100, 120)}.0.0.0 Safari/537.36',
@@ -447,7 +449,7 @@ class ShopeeBot:
         """Refresh session cookies untuk account"""
         try:
             # Access live page dulu untuk refresh session
-            live_url = f"https://live.shopee.co.id/share?session={session_id}"
+            live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
             
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
@@ -560,7 +562,7 @@ def main():
             
             # Try accessing live page first (simple validation)
             try:
-                page_url = f"https://live.shopee.co.id/{session_id}"
+                page_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 }

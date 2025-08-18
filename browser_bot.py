@@ -154,9 +154,10 @@ class ShopeeBot:
             if not driver:
                 return False
             
-            # Navigate ke live streaming
-            live_url = f"https://live.shopee.co.id/{session_id}"
-            print(f"[{current_time}] 🔗 Navigating to: {live_url}")
+            # Navigate ke live streaming dengan format share
+            live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
+            print(f"[{current_time}] 🔗 Navigating to SHARE URL: {live_url}")
+            print(f"[{current_time}] 📋 Using correct share format with from=live parameter")
             
             driver.get(live_url)
             
@@ -278,6 +279,13 @@ def main():
         # Extract session ID jika berupa URL
         if 'live.shopee.co.id' in session_input:
             import re
+            # Handle format: https://live.shopee.co.id/share?from=live&session=154212172
+            match = re.search(r'[?&]session=(\d+)', session_input)
+            if match:
+                session_id = match.group(1)
+                print(f"✅ Session ID extracted: {session_id}")
+                break
+            # Handle legacy format: https://live.shopee.co.id/154212172  
             match = re.search(r'live\.shopee\.co\.id/(\d+)', session_input)
             if match:
                 session_id = match.group(1)
