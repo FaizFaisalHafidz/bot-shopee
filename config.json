@@ -1,0 +1,34 @@
+{
+    "bot_settings": {
+        "like_interval": {
+            "min": 2,
+            "max": 8
+        },
+        "viewer_interval": {
+            "min": 5,
+            "max": 15
+        },
+        "atc_interval": {
+            "min": 3,
+            "max": 10
+        },
+        "thread_delay": 0.5,
+        "request_timeout": 10
+    },
+    "thread_config": {
+        "like_threads": 5,
+        "viewer_threads": 3,
+        "atc_threads": 4
+    },
+    "headers": {
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept": "application/json, text/plain, */*",
+        "accept_language": "id-ID,id;q=0.9,en;q=0.8",
+        "accept_encoding": "gzip, deflate, br"
+    },
+    "shopee_api": {
+        "live_base_url": "https://live.shopee.co.id/api/v1",
+        "cart_base_url": "https://shopee.co.id/api/v4/cart",
+        "main_url": "https://shopee.co.id"
+    }
+}

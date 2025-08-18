@@ -1,0 +1,21 @@
+# Format untuk input.csv - Shopee Live Bot
+# 
+# Setiap baris berisi cookie satu akun Shopee (semicolon separated)
+# Hapus baris dengan # ini setelah mengisi data cookie yang valid
+#
+# Contoh format (ganti dengan cookie asli):
+# _gcl_au=1.1.669529887.1715354495; _fbp=fb.2.1715354495515.451566588; SPC_U=1254699641; csrftoken=0zUQkUHteX31OqbP28cPXJZOPuzx7WYB; SPC_T_ID=NClyT4X2JWCb...
+#
+# Cara mendapatkan cookie:
+# 1. Buka shopee.co.id di browser
+# 2. Login ke akun Shopee
+# 3. Tekan F12 > Application > Cookies > shopee.co.id
+# 4. Copy semua cookie dan gabungkan dengan format "name=value; name2=value2"
+#
+# Cookie yang WAJIB ada:
+# - SPC_U (User ID)
+# - csrftoken (CSRF Token)
+# - SPC_T_ID (Token ID)
+# - SPC_ST (Session Token)
+#
+# Masukkan cookie akun di bawah ini (satu akun per baris):
