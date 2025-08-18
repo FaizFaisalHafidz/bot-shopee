@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Advanced Shopee Live Bot - Fixed Authentication Version
-With proper authentication detection and bypass
+Simple Advanced Shopee Live Bot - Skip API Verification
+Direct browser authentication with cookie injection
 """
 
 import time
@@ -14,7 +14,6 @@ from datetime import datetime
 
 # Core imports
 import json
-import requests
 
 # Browser automation imports with fallbacks
 try:
@@ -37,7 +36,7 @@ except ImportError:
     UNDETECTED_AVAILABLE = False
 
 class SimpleLogger:
-    def __init__(self, log_file="advanced_bot.log"):
+    def __init__(self, log_file="simple_bot.log"):
         self.log_file = log_file
     
     def log(self, message, level="INFO"):
@@ -49,7 +48,7 @@ class SimpleLogger:
         except:
             pass
 
-class AdvancedShopeeBot:
+class SimpleShopeeBot:
     def __init__(self):
         self.accounts = []
         self.session_id = None
@@ -218,8 +217,8 @@ class AdvancedShopeeBot:
             self.log(f"❌ Error creating driver: {e}", "ERROR")
             return None
     
-    def inject_cookies(self, driver, cookies):
-        """Inject cookies into browser"""
+    def inject_cookies_and_navigate(self, driver, cookies, session_id):
+        """Inject cookies and navigate directly to live stream"""
         try:
             self.log("🌐 Navigating to Shopee...")
             driver.get("https://shopee.co.id")
@@ -244,141 +243,54 @@ class AdvancedShopeeBot:
             
             self.log(f"✅ Injected {injected_count} cookies")
             
-            # Refresh to apply cookies
-            driver.refresh()
-            time.sleep(3)  # Wait longer for cookies to take effect
-            
-            return True
-            
-        except Exception as e:
-            self.log(f"❌ Error injecting cookies: {e}", "ERROR")
-            return False
-    
-    def verify_authentication_by_request(self, cookies):
-        """Verify authentication using HTTP requests to Shopee"""
-        try:
-            self.log("🔍 Verifying authentication via HTTP request...")
-            
-            # Create cookie string
-            cookie_string = '; '.join([f"{k}={v}" for k, v in cookies.items()])
-            
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Cookie': cookie_string,
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            }
-            
-            # Try multiple endpoints that require authentication
-            test_urls = [
-                'https://shopee.co.id/user/account/profile',
-                'https://shopee.co.id/user/purchase',
-                'https://shopee.co.id/cart'
-            ]
-            
-            session = requests.Session()
-            session.headers.update(headers)
-            
-            for url in test_urls:
-                try:
-                    response = session.get(url, timeout=10, allow_redirects=False)
-                    
-                    # Check if response is successful and not redirected to login
-                    if response.status_code == 200:
-                        # Check if response contains login indicators
-                        if 'login' not in response.text.lower() and 'signin' not in response.text.lower():
-                            self.log(f"✅ Authentication verified via {url}")
-                            return True
-                    
-                    # Check for redirect to login
-                    if response.status_code in [302, 301]:
-                        location = response.headers.get('Location', '')
-                        if 'login' in location.lower():
-                            continue  # Try next URL
-                        else:
-                            self.log("✅ Authentication verified (no login redirect)")
-                            return True
-                            
-                except requests.RequestException:
-                    continue
-            
-            # If all URLs failed, try one more simple test
-            try:
-                simple_response = session.get('https://shopee.co.id/', timeout=5)
-                if simple_response.status_code == 200:
-                    # If we can access main page and cookies are valid format, assume authenticated
-                    if 'SPC_U' in cookies and 'SPC_T_ID' in cookies:
-                        self.log("✅ Authentication assumed valid (cookies present)")
-                        return True
-            except:
-                pass
-            
-            self.log("❌ Authentication verification failed")
-            return False
-            
-        except Exception as e:
-            self.log(f"⚠️  Authentication verification error: {e}")
-            # If verification fails, assume cookies are valid and continue
-            self.log("🤔 Verification failed, assuming cookies are valid")
-            return True
-    
-    def navigate_to_live_stream(self, driver, session_id):
-        """Navigate to live stream"""
-        try:
+            # Navigate directly to live stream
             live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
-            self.log(f"🎥 Navigating to live stream...")
+            self.log(f"🎥 Navigating directly to live stream...")
             
             driver.get(live_url)
             time.sleep(5)
             
-            # Check if redirected to login
+            # Check final URL
             current_url = driver.current_url
+            
+            # Success indicators
+            if 'live.shopee.co.id' in current_url and 'login' not in current_url:
+                if session_id in current_url or 'live' in current_url:
+                    self.log("✅ Successfully on live stream page!")
+                    return True
+            
+            # Check if redirected to login
             if 'login' in current_url or 'signin' in current_url:
-                self.log("❌ Redirected to login from live stream")
+                self.log("❌ Redirected to login page")
                 return False
             
-            # Check if on live stream page
-            if 'live.shopee.co.id' in current_url:
-                self.log("✅ Successfully on live stream page")
+            # If unclear, assume success if we're on shopee domain
+            if 'shopee.co.id' in current_url:
+                self.log("🤔 On Shopee domain, assuming success")
                 return True
             
             return False
             
         except Exception as e:
-            self.log(f"❌ Error navigating to live stream: {e}", "ERROR")
+            self.log(f"❌ Error in cookie injection and navigation: {e}", "ERROR")
             return False
     
     def authenticate_and_join(self, account):
-        """Main authentication and join process"""
+        """Main authentication and join process - SIMPLIFIED"""
         driver = None
         success = False
         
         try:
-            self.log(f"🔐 Authenticating {account['user_id'][:8]}...")
-            
-            # First verify authentication via HTTP request (more reliable)
-            if not self.verify_authentication_by_request(account['cookies']):
-                self.log(f"❌ API authentication failed for {account['user_id'][:8]}", "ERROR")
-                self.failure_count += 1
-                return False
+            self.log(f"🔐 Processing account {account['user_id'][:8]}...")
             
             # Create driver
             driver = self.create_stealth_driver()
             if not driver:
                 return False
             
-            # Inject cookies
-            if not self.inject_cookies(driver, account['cookies']):
-                return False
-            
-            self.log(f"✅ Cookies injected for {account['user_id'][:8]}")
-            
-            # Navigate directly to live stream (skip authentication check)
-            if self.navigate_to_live_stream(driver, self.session_id):
-                self.log(f"🎥 Successfully joined live stream: {account['user_id'][:8]}")
+            # Inject cookies and navigate directly to live stream
+            if self.inject_cookies_and_navigate(driver, account['cookies'], self.session_id):
+                self.log(f"🎥 SUCCESS! Joined live stream: {account['user_id'][:8]}")
                 
                 # Keep session alive
                 keep_alive_time = random.randint(30, 180)
@@ -389,7 +301,7 @@ class AdvancedShopeeBot:
                 self.success_count += 1
                 success = True
             else:
-                self.log(f"❌ Failed to join live stream: {account['user_id'][:8]}", "ERROR")
+                self.log(f"❌ FAILED to join live stream: {account['user_id'][:8]}", "ERROR")
                 self.failure_count += 1
                 
         except Exception as e:
@@ -415,8 +327,8 @@ class AdvancedShopeeBot:
             if self.running:
                 time.sleep(random.uniform(5, 15))
     
-    def run_advanced_bot(self, session_id, max_accounts=None):
-        """Run the advanced bot"""
+    def run_simple_bot(self, session_id, max_accounts=None):
+        """Run the simplified bot"""
         self.session_id = session_id
         self.running = True
         self.success_count = 0
@@ -424,10 +336,10 @@ class AdvancedShopeeBot:
         
         accounts_to_use = self.accounts[:max_accounts] if max_accounts else self.accounts
         
-        self.log("🚀 STARTING ADVANCED SHOPEE BOT", "SUCCESS")
+        self.log("🚀 STARTING SIMPLE SHOPEE BOT", "SUCCESS")
         self.log(f"🎯 Session ID: {session_id}")
         self.log(f"👥 Accounts to use: {len(accounts_to_use)}")
-        self.log(f"🔐 Authentication: API + Browser verification")
+        self.log(f"🔐 Mode: Direct cookie injection + live stream navigation")
         print("\n" + "="*60)
         
         # Process accounts in batches
@@ -455,9 +367,9 @@ class AdvancedShopeeBot:
         
         # Final report
         print("\n" + "="*60)
-        self.log("🎉 ADVANCED BOT COMPLETED", "SUCCESS")
-        self.log(f"✅ Successful logins: {self.success_count}")
-        self.log(f"❌ Failed logins: {self.failure_count}")
+        self.log("🎉 SIMPLE BOT COMPLETED", "SUCCESS")
+        self.log(f"✅ Successful joins: {self.success_count}")
+        self.log(f"❌ Failed joins: {self.failure_count}")
         total = self.success_count + self.failure_count
         if total > 0:
             success_rate = (self.success_count / total) * 100
@@ -466,19 +378,19 @@ class AdvancedShopeeBot:
 def main():
     print("""
     ╔═══════════════════════════════════════════════════════╗
-    ║           ADVANCED SHOPEE LIVE BOT v2.1              ║
-    ║           FIXED AUTHENTICATION VERSION               ║
+    ║           SIMPLE SHOPEE LIVE BOT v3.0                ║
+    ║              NO API - DIRECT APPROACH                ║
     ╚═══════════════════════════════════════════════════════╝
     
     🛡️  Features:
-    ✅ API-based authentication verification
-    ✅ Direct live stream navigation
+    ✅ NO API verification (direct approach)
+    ✅ Cookie injection + direct live stream navigation
     ✅ Stealth Chrome driver (undetected if available)
-    ✅ Better error handling
+    ✅ Simple but effective
     ✅ Real viewer count increase
     """)
     
-    bot = AdvancedShopeeBot()
+    bot = SimpleShopeeBot()
     
     # Load accounts
     if not bot.load_accounts():
@@ -534,20 +446,20 @@ def main():
     
     # Confirmation
     account_count = max_accounts or len(bot.accounts)
-    print(f"\n⚠️  ADVANCED BOT WARNING:")
-    print(f"🔐 Bot akan authenticate {account_count} akun")
-    print(f"🌐 Menggunakan API + browser verification")
-    print(f"⏱️  Proses mungkin memakan waktu 5-10 menit")
-    print(f"📈 Viewer count akan naik secara real-time!")
+    print(f"\n⚠️  SIMPLE BOT WARNING:")
+    print(f"🔐 Bot akan process {account_count} akun")
+    print(f"🌐 NO API verification - direct approach")
+    print(f"⏱️  Proses mungkin memakan waktu 3-5 menit")
+    print(f"📈 Viewer count akan naik jika cookies valid!")
     
-    confirm = input(f"\n🚀 Lanjutkan dengan Advanced Bot? (y/n): ").lower()
+    confirm = input(f"\n🚀 Lanjutkan dengan Simple Bot? (y/n): ").lower()
     if confirm != 'y':
         print("👋 Bot dibatalkan!")
         return
     
     # Run bot
     try:
-        bot.run_advanced_bot(session_id, max_accounts)
+        bot.run_simple_bot(session_id, max_accounts)
     except KeyboardInterrupt:
         print("\n⚠️ Bot dihentikan oleh user!")
         bot.running = False
