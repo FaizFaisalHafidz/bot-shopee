@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Advanced Shopee Live Bot - Simplified Version
-With better import handling and fallbacks
+Advanced Shopee Live Bot - Fixed Authentication Version
+With proper authentication detection and bypass
 """
 
 import time
@@ -246,7 +246,7 @@ class AdvancedShopeeBot:
             
             # Refresh to apply cookies
             driver.refresh()
-            time.sleep(2)
+            time.sleep(3)  # Wait longer for cookies to take effect
             
             return True
             
@@ -254,104 +254,36 @@ class AdvancedShopeeBot:
             self.log(f"❌ Error injecting cookies: {e}", "ERROR")
             return False
     
-    def check_authentication(self, driver):
-        """Check if user is authenticated"""
+    def verify_authentication_by_api(self, cookies):
+        """Verify authentication using Shopee API"""
         try:
-            # Wait for page to fully load
-            time.sleep(3)
+            self.log("🔍 Verifying authentication via API...")
             
-            # Check URL for login redirect first
-            current_url = driver.current_url
-            self.log(f"🔍 Current URL: {current_url}")
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json',
+                'Cookie': '; '.join([f"{k}={v}" for k, v in cookies.items()])
+            }
             
-            if 'login' in current_url.lower() or 'signin' in current_url.lower():
-                self.log("❌ Redirected to login page")
-                return False
+            # Try to access user profile API
+            response = requests.get(
+                'https://shopee.co.id/api/v4/account/basic',
+                headers=headers,
+                timeout=10
+            )
             
-            # Look for authentication indicators (positive signs)
-            auth_indicators = [
-                "//div[contains(@class, 'navbar-account')]",
-                "//div[contains(@class, 'shopee-avatar')]",
-                "//div[contains(@class, 'navbar__username')]",
-                "//div[@data-sqe='nav_user']",
-                "//span[contains(@class, 'navbar__username')]",
-                "//div[contains(@class, 'user-info')]"
-            ]
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and data['data']:
+                    self.log("✅ API authentication verified")
+                    return True
             
-            for indicator in auth_indicators:
-                try:
-                    element = driver.find_element(By.XPATH, indicator)
-                    if element:
-                        self.log("✅ Found authentication indicator")
-                        return True
-                except:
-                    continue
-            
-            # Look for login buttons/text (negative signs)
-            login_selectors = [
-                "//div[contains(text(), 'Masuk') and contains(@class, 'btn')]",
-                "//div[contains(text(), 'Login') and contains(@class, 'btn')]",
-                "//a[contains(text(), 'Masuk')]",
-                "//button[contains(text(), 'Masuk')]"
-            ]
-            
-            login_found = False
-            for selector in login_selectors:
-                try:
-                    element = driver.find_element(By.XPATH, selector)
-                    if element and element.is_displayed():
-                        self.log("❌ Found login button - not authenticated")
-                        login_found = True
-                        break
-                except:
-                    continue
-            
-            if login_found:
-                return False
-            
-    def test_authentication_access(self, driver):
-        """Test authentication by accessing user profile"""
-        try:
-            self.log("🔍 Testing authentication access...")
-            
-            # Try to access user profile or account page
-            profile_url = "https://shopee.co.id/user/account/profile"
-            driver.get(profile_url)
-            time.sleep(3)
-            
-            current_url = driver.current_url
-            
-            # If redirected to login, not authenticated
-            if 'login' in current_url or 'signin' in current_url:
-                self.log("❌ Redirected to login when accessing profile")
-                return False
-            
-            # If URL contains profile/account, likely authenticated
-            if 'profile' in current_url or 'account' in current_url:
-                self.log("✅ Successfully accessed user profile")
-                return True
-            
-            # Try alternative: check if we can access cart
-            cart_url = "https://shopee.co.id/cart"
-            driver.get(cart_url)
-            time.sleep(2)
-            
-            current_url = driver.current_url
-            if 'login' in current_url or 'signin' in current_url:
-                self.log("❌ Redirected to login when accessing cart")
-                return False
-            
-            if 'cart' in current_url:
-                self.log("✅ Successfully accessed cart - authenticated")
-                return True
-            
-            # If all else fails, assume authenticated
-            self.log("🤔 Unclear authentication status, assuming success")
-            return True
+            self.log("❌ API authentication failed")
+            return False
             
         except Exception as e:
-            self.log(f"⚠️  Error testing auth access: {e}")
-            return True
+            self.log(f"⚠️  API verification error: {e}")
+            return False
     
     def navigate_to_live_stream(self, driver, session_id):
         """Navigate to live stream"""
@@ -362,11 +294,18 @@ class AdvancedShopeeBot:
             driver.get(live_url)
             time.sleep(5)
             
-            # Check if on live stream page
-            if 'login' in driver.current_url or 'signin' in driver.current_url:
+            # Check if redirected to login
+            current_url = driver.current_url
+            if 'login' in current_url or 'signin' in current_url:
+                self.log("❌ Redirected to login from live stream")
                 return False
             
-            return True
+            # Check if on live stream page
+            if 'live.shopee.co.id' in current_url:
+                self.log("✅ Successfully on live stream page")
+                return True
+            
+            return False
             
         except Exception as e:
             self.log(f"❌ Error navigating to live stream: {e}", "ERROR")
@@ -380,6 +319,12 @@ class AdvancedShopeeBot:
         try:
             self.log(f"🔐 Authenticating {account['user_id'][:8]}...")
             
+            # First verify authentication via API (faster)
+            if not self.verify_authentication_by_api(account['cookies']):
+                self.log(f"❌ API authentication failed for {account['user_id'][:8]}", "ERROR")
+                self.failure_count += 1
+                return False
+            
             # Create driver
             driver = self.create_stealth_driver()
             if not driver:
@@ -389,15 +334,9 @@ class AdvancedShopeeBot:
             if not self.inject_cookies(driver, account['cookies']):
                 return False
             
-            # Check authentication
-            if not self.check_authentication(driver):
-                self.log(f"❌ Authentication failed: {account['user_id'][:8]}", "ERROR")
-                self.failure_count += 1
-                return False
+            self.log(f"✅ Cookies injected for {account['user_id'][:8]}")
             
-            self.log(f"✅ Authentication success for {account['user_id'][:8]}")
-            
-            # Navigate to live stream
+            # Navigate directly to live stream (skip authentication check)
             if self.navigate_to_live_stream(driver, self.session_id):
                 self.log(f"🎥 Successfully joined live stream: {account['user_id'][:8]}")
                 
@@ -448,7 +387,7 @@ class AdvancedShopeeBot:
         self.log("🚀 STARTING ADVANCED SHOPEE BOT", "SUCCESS")
         self.log(f"🎯 Session ID: {session_id}")
         self.log(f"👥 Accounts to use: {len(accounts_to_use)}")
-        self.log(f"🔐 Authentication: ENABLED")
+        self.log(f"🔐 Authentication: API + Browser verification")
         print("\n" + "="*60)
         
         # Process accounts in batches
@@ -487,15 +426,15 @@ class AdvancedShopeeBot:
 def main():
     print("""
     ╔═══════════════════════════════════════════════════════╗
-    ║           ADVANCED SHOPEE LIVE BOT v2.0              ║
-    ║            SIMPLIFIED WITH BETTER IMPORTS             ║
+    ║           ADVANCED SHOPEE LIVE BOT v2.1              ║
+    ║           FIXED AUTHENTICATION VERSION               ║
     ╚═══════════════════════════════════════════════════════╝
     
     🛡️  Features:
-    ✅ Advanced authentication bypass
+    ✅ API-based authentication verification
+    ✅ Direct live stream navigation
     ✅ Stealth Chrome driver (undetected if available)
-    ✅ Anti-detection mechanisms
-    ✅ Better import handling
+    ✅ Better error handling
     ✅ Real viewer count increase
     """)
     
@@ -557,7 +496,7 @@ def main():
     account_count = max_accounts or len(bot.accounts)
     print(f"\n⚠️  ADVANCED BOT WARNING:")
     print(f"🔐 Bot akan authenticate {account_count} akun")
-    print(f"🌐 Menggunakan stealth Chrome driver")
+    print(f"🌐 Menggunakan API + browser verification")
     print(f"⏱️  Proses mungkin memakan waktu 5-10 menit")
     print(f"📈 Viewer count akan naik secara real-time!")
     
