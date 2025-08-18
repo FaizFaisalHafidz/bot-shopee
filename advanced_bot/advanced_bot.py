@@ -17,17 +17,30 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from advanced_bot.auth.shopee_auth import ShopeeAuth
-    from advanced_bot.utils.logger import BotLogger
+    # Try different import paths
+    try:
+        from auth.shopee_auth import ShopeeAuth
+        from utils.logger import BotLogger
+    except ImportError:
+        # Fallback to advanced_bot prefix
+        from advanced_bot.auth.shopee_auth import ShopeeAuth
+        from advanced_bot.utils.logger import BotLogger
 except ImportError:
     print("❌ Missing dependencies! Installing required packages...")
     os.system("pip install undetected-chromedriver selenium requests")
+    
+    # Try imports again after installation
     try:
-        from advanced_bot.auth.shopee_auth import ShopeeAuth
-        from advanced_bot.utils.logger import BotLogger
+        from auth.shopee_auth import ShopeeAuth
+        from utils.logger import BotLogger
     except ImportError:
-        print("❌ Could not import required modules!")
-        sys.exit(1)
+        try:
+            from advanced_bot.auth.shopee_auth import ShopeeAuth
+            from advanced_bot.utils.logger import BotLogger
+        except ImportError:
+            print("❌ Could not import required modules!")
+            print("💡 Make sure you're running from the advanced_bot directory")
+            sys.exit(1)
 
 class AdvancedShopeeBot:
     def __init__(self):

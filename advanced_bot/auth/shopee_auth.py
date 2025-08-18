@@ -15,7 +15,27 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-import undetected_chromedriver as uc
+# Browser automation imports
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.common.exceptions import TimeoutException, NoSuchElementException
+    
+    # Try to import undetected_chromedriver
+    try:
+        import undetected_chromedriver as uc
+        UNDETECTED_AVAILABLE = True
+    except ImportError:
+        print("⚠️  undetected-chromedriver not available, using standard Chrome driver")
+        UNDETECTED_AVAILABLE = False
+        
+except ImportError as e:
+    print(f"❌ Selenium import error: {e}")
+    print("💡 Install with: pip install selenium undetected-chromedriver")
+    raise
 
 class ShopeeAuth:
     def __init__(self):
@@ -26,36 +46,82 @@ class ShopeeAuth:
     def create_stealth_driver(self):
         """Create undetected Chrome driver for bypassing detection"""
         try:
-            options = uc.ChromeOptions()
+            # Try undetected Chrome first
+            if UNDETECTED_AVAILABLE:
+                try:
+                    options = uc.ChromeOptions()
+                    
+                    # Stealth settings
+                    options.add_argument('--no-first-run')
+                    options.add_argument('--no-default-browser-check')
+                    options.add_argument('--disable-blink-features=AutomationControlled')
+                    options.add_argument('--disable-extensions')
+                    options.add_argument('--disable-plugins-discovery')
+                    options.add_argument('--disable-dev-shm-usage')
+                    options.add_argument('--no-sandbox')
+                    
+                    # Random window size
+                    window_sizes = [
+                        '--window-size=1366,768',
+                        '--window-size=1920,1080', 
+                        '--window-size=1440,900',
+                        '--window-size=1280,720'
+                    ]
+                    options.add_argument(random.choice(window_sizes))
+                    
+                    # Create undetected Chrome driver
+                    self.driver = uc.Chrome(options=options, version_main=None)
+                    print("✅ Using undetected Chrome driver")
+                    
+                except Exception as e:
+                    print(f"⚠️  Undetected Chrome failed: {e}")
+                    print("🔄 Falling back to standard Chrome driver...")
+                    UNDETECTED_AVAILABLE = False
             
-            # Stealth settings
-            options.add_argument('--no-first-run')
-            options.add_argument('--no-default-browser-check')
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_argument('--disable-extensions')
-            options.add_argument('--disable-plugins-discovery')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--no-sandbox')
+            # Use standard Chrome if undetected not available
+            if not UNDETECTED_AVAILABLE or not self.driver:
+                options = Options()
+                
+                # Stealth settings for standard Chrome
+                options.add_argument('--no-first-run')
+                options.add_argument('--no-default-browser-check')
+                options.add_argument('--disable-blink-features=AutomationControlled')
+                options.add_argument('--disable-extensions')
+                options.add_argument('--disable-plugins-discovery')
+                options.add_argument('--disable-dev-shm-usage')
+                options.add_argument('--no-sandbox')
+                options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                options.add_experimental_option('useAutomationExtension', False)
+                
+                # Random window size
+                window_sizes = [
+                    '--window-size=1366,768',
+                    '--window-size=1920,1080', 
+                    '--window-size=1440,900',
+                    '--window-size=1280,720'
+                ]
+                options.add_argument(random.choice(window_sizes))
+                
+                # Random user agent
+                user_agents = [
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+                ]
+                options.add_argument(f'--user-agent={random.choice(user_agents)}')
+                
+                # Create standard Chrome driver
+                self.driver = webdriver.Chrome(options=options)
+                print("✅ Using standard Chrome driver with stealth settings")
             
-            # Random window size
-            window_sizes = [
-                '--window-size=1366,768',
-                '--window-size=1920,1080', 
-                '--window-size=1440,900',
-                '--window-size=1280,720'
-            ]
-            options.add_argument(random.choice(window_sizes))
-            
-            # Create undetected Chrome driver
-            self.driver = uc.Chrome(options=options, version_main=None)
-            
-            # Additional anti-detection
-            self.driver.execute_script("""
-                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-                Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en', 'id']});
-                window.chrome = {runtime: {}};
-            """)
+            # Additional anti-detection (works for both)
+            if self.driver:
+                self.driver.execute_script("""
+                    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                    Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+                    Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en', 'id']});
+                    window.chrome = {runtime: {}};
+                """)
             
             return True
             
