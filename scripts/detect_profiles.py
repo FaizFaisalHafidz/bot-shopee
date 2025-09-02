@@ -93,24 +93,39 @@ def find_chrome_profiles():
     return profiles
 
 # Main execution
-profiles = find_chrome_profiles()
-
-if not profiles:
-    print("❌ Tidak ada profile Chrome yang ditemukan!")
-    print("💡 Pastikan Chrome sudah diinstall dan pernah digunakan.")
-    sys.exit(1)
-
-print(f"📋 Ditemukan {len(profiles)} profile Chrome:")
-print()
-
-for i, profile in enumerate(profiles):
-    print(f"   {i+1}. {profile['email']}")
-    print(f"      📁 Path: {profile['path']}")
-    print(f"      🏠 Location: {profile['location']}")
-    print()
-
-# Save profiles to temp file
-with open('temp_profiles.json', 'w') as f:
-    json.dump(profiles, f)
-
-print(f"PROFILE_COUNT={len(profiles)}")
+if __name__ == "__main__":
+    try:
+        print("[DEBUG] Starting profile detection...")
+        profiles = find_chrome_profiles()
+        
+        if not profiles:
+            print("❌ Tidak ada profile Chrome yang ditemukan!")
+            print("💡 Pastikan Chrome sudah diinstall dan pernah digunakan.")
+            print("[DEBUG] No profiles found in any search location")
+            sys.exit(1)
+        
+        print(f"📋 Ditemukan {len(profiles)} profile Chrome:")
+        print()
+        
+        for i, profile in enumerate(profiles):
+            print(f"   {i+1}. {profile['email']}")
+            print(f"      📁 Path: {profile['path']}")
+            print(f"      🏠 Location: {profile['location']}")
+            print()
+        
+        # Save profiles to temp file
+        try:
+            with open('temp_profiles.json', 'w', encoding='utf-8') as f:
+                json.dump(profiles, f, ensure_ascii=False, indent=2)
+            print("[DEBUG] Profiles saved to temp_profiles.json")
+        except Exception as e:
+            print(f"[ERROR] Failed to save profiles: {e}")
+            sys.exit(1)
+        
+        print(f"PROFILE_COUNT={len(profiles)}")
+        
+    except Exception as e:
+        print(f"[ERROR] Unexpected error in profile detection: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

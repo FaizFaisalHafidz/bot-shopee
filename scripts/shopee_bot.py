@@ -107,142 +107,165 @@ def inject_device_fingerprint(driver, device_id):
         return False
 
 def main():
-    # Ambil parameter dari command line
-    if len(sys.argv) < 4:
-        print("❌ Parameter tidak lengkap!")
-        print("Usage: python shopee_bot.py <session_id> <viewers> <delay>")
-        input("Tekan Enter untuk keluar...")
-        return
-    
-    session_id = sys.argv[1]
-    max_viewers = int(sys.argv[2])
-    delay_seconds = int(sys.argv[3])
-    
-    print(f"🎯 Target: {max_viewers} viewers untuk session {session_id}")
-    print(f"📺 URL: https://live.shopee.co.id/share?from=live&session={session_id}&in=1")
-    print()
-    
-    # Ambil profile yang tersedia
-    available_profiles = get_available_profiles()
-    
-    if not available_profiles:
-        print("❌ Tidak ada profile Google Chrome yang ditemukan!")
-        input("Tekan Enter untuk keluar...")
-        return
-    
-    print(f"📋 Ditemukan {len(available_profiles)} profile Chrome:")
-    for i, profile in enumerate(available_profiles):
-        print(f"   {i+1}. {profile['email']}")
-    print()
-    
-    viewers = []
-    live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}&in=1"
-    
     try:
-        for i in range(min(max_viewers, len(available_profiles))):
-            profile = available_profiles[i]
-            device_id = generate_device_id()
-            
-            print(f"🚀 Memulai viewer #{i+1}: {profile['email']}")
-            print(f"   📱 Device ID: {device_id[:8]}...{device_id[-4:]}")
-            print(f"   📁 Profile: {profile['name']}")
-            
-            # Buat Chrome instance dengan profile
-            driver = create_chrome_with_profile(profile['path'], device_id, i)
-            
-            if driver is None:
-                print(f"❌ Gagal membuat viewer #{i+1}")
-                continue
-            
-            try:
-                # Buka Shopee untuk set device fingerprint
-                print(f"   🔧 Setting device fingerprint...")
-                driver.get("https://shopee.co.id")
-                time.sleep(2)
+        print("[DEBUG] Starting shopee_bot.py...")
+        
+        # Ambil parameter dari command line
+        if len(sys.argv) < 4:
+            print("❌ Parameter tidak lengkap!")
+            print("Usage: python shopee_bot.py <session_id> <viewers> <delay>")
+            print(f"[DEBUG] Received {len(sys.argv)} arguments: {sys.argv}")
+            input("Tekan Enter untuk keluar...")
+            return
+        
+        session_id = sys.argv[1]
+        max_viewers = int(sys.argv[2])
+        delay_seconds = int(sys.argv[3])
+        
+        print(f"[DEBUG] Parameters: session={session_id}, viewers={max_viewers}, delay={delay_seconds}")
+        
+        print(f"🎯 Target: {max_viewers} viewers untuk session {session_id}")
+        print(f"📺 URL: https://live.shopee.co.id/share?from=live&session={session_id}&in=1")
+        print()
+        
+        # Ambil profile yang tersedia
+        print("[DEBUG] Loading profiles from temp_profiles.json...")
+        available_profiles = get_available_profiles()
+        
+        if not available_profiles:
+            print("❌ Tidak ada profile Google Chrome yang ditemukan!")
+            print("[DEBUG] temp_profiles.json is empty or missing")
+            input("Tekan Enter untuk keluar...")
+            return
+        
+        print(f"📋 Ditemukan {len(available_profiles)} profile Chrome:")
+        for i, profile in enumerate(available_profiles):
+            print(f"   {i+1}. {profile['email']}")
+        print()
+        
+        viewers = []
+        live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}&in=1"
+        
+        try:
+            for i in range(min(max_viewers, len(available_profiles))):
+                profile = available_profiles[i]
+                device_id = generate_device_id()
                 
-                # Inject device fingerprint
-                if inject_device_fingerprint(driver, device_id):
-                    print(f"   ✅ Device fingerprint berhasil di-inject")
-                else:
-                    print(f"   ⚠️  Warning: Device fingerprint gagal di-inject")
+                print(f"🚀 Memulai viewer #{i+1}: {profile['email']}")
+                print(f"   📱 Device ID: {device_id[:8]}...{device_id[-4:]}")
+                print(f"   📁 Profile: {profile['name']}")
                 
-                # Buka live stream
-                print(f"   🎥 Membuka live stream...")
-                driver.get(live_url)
-                time.sleep(3)
+                # Buat Chrome instance dengan profile
+                print(f"   [DEBUG] Creating Chrome instance with profile: {profile['path']}")
+                driver = create_chrome_with_profile(profile['path'], device_id, i)
                 
-                viewers.append({
-                    'driver': driver,
-                    'email': profile['email'],
-                    'device_id': device_id,
-                    'number': i+1
-                })
+                if driver is None:
+                    print(f"❌ Gagal membuat viewer #{i+1}")
+                    continue
                 
-                print(f"   ✅ Viewer #{i+1} berhasil terhubung!")
-                print()
-                
-                # Delay sebelum viewer berikutnya
-                if i < min(max_viewers, len(available_profiles)) - 1:
-                    print(f"⏱️  Menunggu {delay_seconds} detik sebelum viewer berikutnya...")
-                    time.sleep(delay_seconds)
-                
-            except Exception as e:
-                print(f"❌ Error pada viewer #{i+1}: {e}")
                 try:
-                    driver.quit()
-                except:
-                    pass
-        
-        print("="*60)
-        print(f"🎉 SEMUA {len(viewers)} VIEWERS BERHASIL DIMULAI!")
-        print("="*60)
-        print()
-        
-        print("📋 DETAIL VIEWERS:")
-        for viewer in viewers:
-            print(f"   👤 Viewer #{viewer['number']}: {viewer['email']}")
-            print(f"      📱 Device ID: {viewer['device_id']}")
-        print()
-        
-        print("🎯 Bot sedang berjalan! Cek live stream Anda - jumlah viewer seharusnya bertambah!")
-        print("💡 Jangan tutup jendela Chrome yang terbuka.")
-        print("🛑 Tekan Ctrl+C untuk menghentikan bot...")
-        print()
-        
-        # Monitor viewers
-        while True:
-            time.sleep(30)  # Cek setiap 30 detik
+                    # Buka Shopee untuk set device fingerprint
+                    print(f"   🔧 Setting device fingerprint...")
+                    driver.get("https://shopee.co.id")
+                    time.sleep(2)
+                    
+                    # Inject device fingerprint
+                    if inject_device_fingerprint(driver, device_id):
+                        print(f"   ✅ Device fingerprint berhasil di-inject")
+                    else:
+                        print(f"   ⚠️  Warning: Device fingerprint gagal di-inject")
+                    
+                    # Buka live stream
+                    print(f"   🎥 Membuka live stream...")
+                    driver.get(live_url)
+                    time.sleep(3)
+                    
+                    viewers.append({
+                        'driver': driver,
+                        'email': profile['email'],
+                        'device_id': device_id,
+                        'number': i+1
+                    })
+                    
+                    print(f"   ✅ Viewer #{i+1} berhasil terhubung!")
+                    print()
+                    
+                    # Delay sebelum viewer berikutnya
+                    if i < min(max_viewers, len(available_profiles)) - 1:
+                        print(f"⏱️  Menunggu {delay_seconds} detik sebelum viewer berikutnya...")
+                        time.sleep(delay_seconds)
+                    
+                except Exception as e:
+                    print(f"❌ Error pada viewer #{i+1}: {e}")
+                    print(f"[DEBUG] Full error: {str(e)}")
+                    try:
+                        driver.quit()
+                    except:
+                        pass
             
-            active_count = 0
+            if not viewers:
+                print("❌ Tidak ada viewers yang berhasil dibuat!")
+                input("Tekan Enter untuk keluar...")
+                return
+            
+            print("="*60)
+            print(f"🎉 SEMUA {len(viewers)} VIEWERS BERHASIL DIMULAI!")
+            print("="*60)
+            print()
+            
+            print("📋 DETAIL VIEWERS:")
+            for viewer in viewers:
+                print(f"   👤 Viewer #{viewer['number']}: {viewer['email']}")
+                print(f"      📱 Device ID: {viewer['device_id']}")
+            print()
+            
+            print("🎯 Bot sedang berjalan! Cek live stream Anda - jumlah viewer seharusnya bertambah!")
+            print("💡 Jangan tutup jendela Chrome yang terbuka.")
+            print("🛑 Tekan Ctrl+C untuk menghentikan bot...")
+            print()
+            
+            # Monitor viewers
+            while True:
+                time.sleep(30)  # Cek setiap 30 detik
+                
+                active_count = 0
+                for viewer in viewers:
+                    try:
+                        # Cek apakah browser masih aktif
+                        if viewer['driver'].window_handles:
+                            active_count += 1
+                    except:
+                        pass
+                
+                print(f"📊 Status: {active_count}/{len(viewers)} viewers masih aktif - {time.strftime('%H:%M:%S')}")
+                
+                if active_count == 0:
+                    print("⚠️  Semua viewers sudah tidak aktif.")
+                    break
+            
+        except KeyboardInterrupt:
+            print("\n🛑 Bot dihentikan oleh user...")
+        except Exception as e:
+            print(f"\n❌ Error during bot execution: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Cleanup
+            print("🧹 Membersihkan viewers...")
             for viewer in viewers:
                 try:
-                    # Cek apakah browser masih aktif
-                    if viewer['driver'].window_handles:
-                        active_count += 1
-                except:
-                    pass
-            
-            print(f"📊 Status: {active_count}/{len(viewers)} viewers masih aktif - {time.strftime('%H:%M:%S')}")
-            
-            if active_count == 0:
-                print("⚠️  Semua viewers sudah tidak aktif.")
-                break
-        
-    except KeyboardInterrupt:
-        print("\n🛑 Bot dihentikan oleh user...")
+                    viewer['driver'].quit()
+                    print(f"   ✅ Viewer {viewer['email']} ditutup")
+                except Exception as e:
+                    print(f"   ⚠️  Error closing viewer: {e}")
+            print("✅ Semua viewers berhasil ditutup. Bot selesai.")
+            print()
+            input("Tekan Enter untuk keluar...")
+    
     except Exception as e:
-        print(f"\n❌ Error: {e}")
-    finally:
-        # Cleanup
-        print("🧹 Membersihkan viewers...")
-        for viewer in viewers:
-            try:
-                viewer['driver'].quit()
-                print(f"   ✅ Viewer {viewer['email']} ditutup")
-            except:
-                pass
-        print("✅ Semua viewers berhasil ditutup. Bot selesai.")
-        print()
+        print(f"[ERROR] Fatal error in main(): {e}")
+        import traceback
+        traceback.print_exc()
         input("Tekan Enter untuk keluar...")
 
 if __name__ == "__main__":
