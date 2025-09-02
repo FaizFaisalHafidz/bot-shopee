@@ -92,9 +92,19 @@ if %DETECTION_ERROR% NEQ 0 (
     type temp_profile_output.txt
 )
 
+REM Copy JSON output to temp_profiles.json 
+copy temp_profile_output.txt temp_profiles.json >nul 2>&1
+
+REM Count profiles in JSON using Python
+echo [%date% %time%] Counting profiles from JSON >> %LOGFILE%
+python -c "import json; profiles=json.load(open('temp_profiles.json')); print('PROFILE_COUNT=' + str(len(profiles)))" > profile_count.txt 2>>%LOGFILE%
+
 REM Ambil jumlah profile dari output
-for /f "tokens=2 delims==" %%i in ('findstr "PROFILE_COUNT" temp_profile_output.txt') do set profile_count=%%i
+for /f "tokens=2 delims==" %%i in (profile_count.txt) do set profile_count=%%i
 echo [%date% %time%] Profile count detected: %profile_count% >> %LOGFILE%
+
+REM Cleanup temp file
+if exist "profile_count.txt" del profile_count.txt >nul 2>&1
 
 if "%profile_count%"=="" (
     echo [ERROR] Tidak bisa mendapatkan jumlah profile!
