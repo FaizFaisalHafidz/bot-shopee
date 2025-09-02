@@ -149,59 +149,109 @@ def get_available_profiles():
         print(f"[ERROR] Error reading profiles: {e}")
         return []
 
+def kill_chrome_processes():
+    """Kill all Chrome processes to avoid conflicts"""
+    try:
+        if os.name == 'nt':  # Windows
+            print("[INFO] Killing Chrome processes on Windows...")
+            import subprocess
+            result = subprocess.run(['taskkill', '/f', '/im', 'chrome.exe', '/t'], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                print("[SUCCESS] Chrome processes terminated")
+            else:
+                print("[INFO] No Chrome processes found or already terminated")
+        else:  # macOS/Linux
+            print("[INFO] Killing Chrome processes on Unix...")
+            import subprocess
+            subprocess.run(['pkill', '-f', 'Google Chrome'], capture_output=True)
+            subprocess.run(['pkill', '-f', 'chrome'], capture_output=True)
+            print("[SUCCESS] Chrome processes terminated")
+        
+        # Wait for processes to fully terminate
+        time.sleep(3)
+        
+    except Exception as e:
+        print(f"[WARNING] Could not kill Chrome processes: {e}")
+        print("[INFO] Continuing anyway...")
+
 def create_chrome_with_profile(profile_data, device_id, viewer_num):
-    """Buat Chrome instance dengan profile spesifik dan sign in manual"""
+    """Buat Chrome instance menggunakan profile yang sudah login"""
     try:
         print(f"   [DEBUG] Setting up Chrome for viewer #{viewer_num+1}")
         
         # Extract profile information
         if isinstance(profile_data, dict):
+            original_profile_path = profile_data.get('path')
             email = profile_data.get('email', 'Unknown')
             display_name = profile_data.get('display_name', 'Unknown')
-            print(f"   [INFO] Target account: {email} ({display_name})")
+            name = profile_data.get('name', 'Unknown')
+            print(f"   [INFO] Using existing profile: {email} ({display_name})")
+            print(f"   [DEBUG] Profile path: {original_profile_path}")
         else:
-            email = 'Unknown'
-            
-        # Create fresh isolated profile for this viewer
-        base_dir = os.path.join(os.getcwd(), '..', 'sessions', 'bot_viewers')
-        os.makedirs(base_dir, exist_ok=True)
-        
-        viewer_profile = os.path.join(base_dir, f"viewer_{viewer_num+1}")
-        
-        # Clean up existing profile
-        if os.path.exists(viewer_profile):
-            import shutil
-            shutil.rmtree(viewer_profile)
-        
-        os.makedirs(viewer_profile, exist_ok=True)
-        print(f"   [DEBUG] Fresh profile created: {viewer_profile}")
+            print("[ERROR] Invalid profile data")
+            return None
         
         options = Options()
         
-        # Use fresh profile
-        options.add_argument(f'--user-data-dir={viewer_profile}')
+        # IMPORTANT: Use existing Chrome profile directly
+        # This preserves login sessions
+        if os.name == 'nt':  # Windows
+            # For Windows: C:\Users\...\Chrome\User Data\Profile 1
+            if "User Data" in original_profile_path:
+                user_data_dir = original_profile_path.split("User Data")[0] + "User Data"
+                profile_name = original_profile_path.split("User Data")[-1].strip("\\/")
+                
+                print(f"   [DEBUG] Windows Chrome User Data: {user_data_dir}")
+                print(f"   [DEBUG] Profile Directory: {profile_name}")
+                
+                options.add_argument(f'--user-data-dir="{user_data_dir}"')
+                if profile_name and profile_name.lower() != "default":
+                    options.add_argument(f'--profile-directory="{profile_name}"')
+            else:
+                print(f"   [WARNING] Unexpected Windows profile path: {original_profile_path}")
+                options.add_argument(f'--user-data-dir="{original_profile_path}"')
+        else:  # macOS/Linux  
+            # For macOS: /Users/.../Google/Chrome/Profile 1
+            if "Chrome" in original_profile_path:
+                # Extract User Data equivalent directory
+                parts = original_profile_path.split("Chrome")
+                if len(parts) >= 2:
+                    user_data_dir = parts[0] + "Chrome"
+                    profile_name = parts[1].strip("/")
+                    
+                    print(f"   [DEBUG] macOS Chrome Data: {user_data_dir}")
+                    print(f"   [DEBUG] Profile Directory: {profile_name}")
+                    
+                    options.add_argument(f'--user-data-dir="{user_data_dir}"')
+                    if profile_name and profile_name.lower() != "default":
+                        options.add_argument(f'--profile-directory="{profile_name}"')
+                else:
+                    options.add_argument(f'--user-data-dir="{original_profile_path}"')
+            else:
+                options.add_argument(f'--user-data-dir="{original_profile_path}"')
         
-        # Debugging port
+        # Unique debugging port
         debug_port = 9222 + viewer_num
         options.add_argument(f'--remote-debugging-port={debug_port}')
         
-        # Chrome options
+        # Chrome options to preserve existing sessions
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-default-apps')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--no-sandbox')
-        options.add_argument('--disable-web-security')
-        options.add_argument('--allow-running-insecure-content')
-        options.add_argument('--disable-extensions')
+        
+        # CRITICAL: Don't disable web security - it breaks login sessions
+        # options.add_argument('--disable-web-security')  # REMOVED
         
         # Anti-detection
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         options.add_experimental_option("detach", True)
         
-        # Find Chrome executable
+        # Find Chrome executable (NOT Chromium)
         chrome_executable = None
         if os.name == 'nt':  # Windows
             possible_paths = [
@@ -212,36 +262,42 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         else:  # macOS/Linux
             possible_paths = [
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                "/usr/bin/google-chrome"
+                "/usr/bin/google-chrome",
+                "/usr/bin/chrome"
             ]
         
         for path in possible_paths:
             if os.path.exists(path):
                 chrome_executable = path
-                print(f"   [DEBUG] Using Chrome: {path}")
+                print(f"   [DEBUG] Found Chrome executable: {path}")
                 break
         
         if chrome_executable:
             options.binary_location = chrome_executable
+            print(f"   [SUCCESS] Using actual Chrome (not Chromium)")
+        else:
+            print(f"   [WARNING] Chrome executable not found, may use Chromium")
         
-        # Create driver
+        # Create driver with existing profile
         try:
             service = Service()
             driver = webdriver.Chrome(service=service, options=options)
-        except Exception:
-            from webdriver_manager.chrome import ChromeDriverManager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
+            print(f"   [SUCCESS] Chrome launched with existing profile for {email}")
+        except Exception as e:
+            print(f"   [DEBUG] System chromedriver failed: {e}")
+            try:
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=options)
+                print(f"   [SUCCESS] Chrome launched via ChromeDriverManager for {email}")
+            except Exception as e2:
+                print(f"   [ERROR] Both chromedriver methods failed: {e2}")
+                return None
         
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        print(f"   [SUCCESS] Chrome launched for viewer #{viewer_num+1}")
-        print(f"   [INFO] Profile: Fresh isolated profile")
-        print(f"   [INFO] Target account: {email}")
-        print(f"   [NOTE] This viewer will start without Google login")
-        print(f"   [NOTE] Chrome will show login page if needed")
-        
+        print(f"   [INFO] Chrome should now show existing login for: {email}")
         return driver
         
     except Exception as e:
@@ -315,6 +371,10 @@ def main():
         print(f"TARGET: {max_viewers} viewers untuk session {session_id}")
         print(f"URL: https://live.shopee.co.id/share?from=live&session={session_id}&in=1")
         print()
+        
+        # Kill any existing Chrome processes first
+        print("[INFO] Preparing Chrome environment...")
+        kill_chrome_processes()
         
         # Ambil profile yang tersedia
         print("[DEBUG] Loading profiles from temp_profiles.json...")

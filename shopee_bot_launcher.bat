@@ -28,15 +28,9 @@ if errorlevel 1 (
 )
 
 echo.
-echo [STEP 2] Persiapan environment...
-taskkill /f /im chrome.exe /t >nul 2>&1
-timeout /t 2 /nobreak > nul
-echo [SUCCESS] Chrome processes cleared
-
-if exist "sessions\bot_viewers" (
-    rmdir /s /q "sessions\bot_viewers" >nul 2>&1
-)
-echo [SUCCESS] Bot environment prepared
+echo [STEP 2] Mempersiapkan environment...
+echo [INFO] Chrome processes akan dihentikan otomatis oleh bot
+echo [SUCCESS] Environment preparation ready
 
 echo.
 echo [STEP 3] Konfigurasi bot...
