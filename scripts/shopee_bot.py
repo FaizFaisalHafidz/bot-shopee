@@ -32,7 +32,7 @@ def convert_profile_path_for_os(original_path, profile_name):
     """
     Convert profile path based on current OS
     macOS: /Users/username/Library/Application Support/Google/Chrome/Profile X
-    Windows: C:\Users\username\AppData\Local\Google\Chrome\User Data\Profile X
+    Windows: C:\\Users\\username\\AppData\\Local\\Google\\Chrome\\User Data\\Profile X
     """
     current_os = platform.system().lower()
     print(f"   [DEBUG] Current OS: {current_os}")
@@ -42,7 +42,7 @@ def convert_profile_path_for_os(original_path, profile_name):
     if current_os == "windows":
         # Always use Windows format for Windows
         username = os.environ.get('USERNAME', 'Administrator')
-        user_data_dir = f"C:\\Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data"
+        user_data_dir = rf"C:\Users\{username}\AppData\Local\Google\Chrome\User Data"
         
         if profile_name.lower() == 'default':
             print(f"   [DEBUG] Using Default profile on Windows: {user_data_dir}")
