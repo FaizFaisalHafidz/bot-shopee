@@ -115,20 +115,33 @@ def inject_device_fingerprint(driver, device_id):
 def main():
     try:
         print("[DEBUG] Starting shopee_bot.py...")
+        print(f"[DEBUG] Command line args: {sys.argv}")
+        print(f"[DEBUG] Number of args: {len(sys.argv)}")
         
         # Ambil parameter dari command line
         if len(sys.argv) < 4:
-            print("❌ Parameter tidak lengkap!")
+            print("ERROR: Parameter tidak lengkap!")
             print("Usage: python shopee_bot.py <session_id> <viewers> <delay>")
             print(f"[DEBUG] Received {len(sys.argv)} arguments: {sys.argv}")
             input("Tekan Enter untuk keluar...")
+            sys.exit(1)
+        
+        try:
+            session_id = str(sys.argv[1])
+            max_viewers = int(sys.argv[2])  
+            delay_seconds = int(sys.argv[3])
+        except (ValueError, IndexError) as e:
+            print(f"ERROR: Invalid parameters: {e}")
+            print(f"[DEBUG] Args received: {sys.argv}")
+            input("Tekan Enter untuk keluar...")
+            sys.exit(1)
+        
+        print(f"[DEBUG] Parsed parameters: session={session_id}, viewers={max_viewers}, delay={delay_seconds}")
+        
+        if session_id == "test_session":
+            print("[DEBUG] Test mode detected - exiting early")
+            print("INFO: Bot script working - test mode completed")
             return
-        
-        session_id = sys.argv[1]
-        max_viewers = int(sys.argv[2])
-        delay_seconds = int(sys.argv[3])
-        
-        print(f"[DEBUG] Parameters: session={session_id}, viewers={max_viewers}, delay={delay_seconds}")
         
         print(f"TARGET: {max_viewers} viewers untuk session {session_id}")
         print(f"URL: https://live.shopee.co.id/share?from=live&session={session_id}&in=1")

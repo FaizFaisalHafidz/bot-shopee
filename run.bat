@@ -160,16 +160,44 @@ echo.
 REM Cek dan install dependencies
 echo [INFO] Memeriksa dependencies...
 echo [%date% %time%] Checking dependencies >> %LOGFILE%
+echo.
 
-python -c "import selenium,webdriver_manager" >nul 2>&1
+echo [DEBUG] Testing Python import...
+python -c "import sys; print('Python import test OK')" 2>&1
 if errorlevel 1 (
-    echo [INFO] Installing selenium dan webdriver-manager...
-    echo [%date% %time%] Installing dependencies >> %LOGFILE%
-    python -m pip install selenium webdriver-manager --quiet
+    echo [ERROR] Python basic test failed!
+    echo [%date% %time%] ERROR: Python basic test failed >> %LOGFILE%
+    pause
+    exit /b 1
+)
+
+echo [DEBUG] Testing selenium import...
+python -c "import selenium; print('Selenium import OK')" 2>&1
+set SELENIUM_ERROR=%ERRORLEVEL%
+
+echo [DEBUG] Testing webdriver_manager import...  
+python -c "import webdriver_manager; print('WebDriver Manager import OK')" 2>&1
+set WEBDRIVER_ERROR=%ERRORLEVEL%
+
+if %SELENIUM_ERROR% NEQ 0 (
+    echo [INFO] Installing selenium...
+    echo [%date% %time%] Installing selenium >> %LOGFILE%
+    python -m pip install selenium
     if errorlevel 1 (
-        echo [ERROR] Gagal install dependencies!
-        echo [%date% %time%] ERROR: Failed to install dependencies >> %LOGFILE%
-        echo Check log file: %LOGFILE%
+        echo [ERROR] Gagal install selenium!
+        echo [%date% %time%] ERROR: Failed to install selenium >> %LOGFILE%
+        pause
+        exit /b 1
+    )
+)
+
+if %WEBDRIVER_ERROR% NEQ 0 (
+    echo [INFO] Installing webdriver-manager...
+    echo [%date% %time%] Installing webdriver-manager >> %LOGFILE%
+    python -m pip install webdriver-manager
+    if errorlevel 1 (
+        echo [ERROR] Gagal install webdriver-manager!
+        echo [%date% %time%] ERROR: Failed to install webdriver-manager >> %LOGFILE%
         pause
         exit /b 1
     )
@@ -182,19 +210,34 @@ echo.
 REM Jalankan bot
 echo [INFO] Menjalankan bot...
 echo [%date% %time%] Starting bot with params: %session% %viewers% %delay% >> %LOGFILE%
+echo [DEBUG] Python script path: scripts\shopee_bot.py
+echo [DEBUG] Parameters: session=%session% viewers=%viewers% delay=%delay%
 echo.
 
-python scripts\shopee_bot.py %session% %viewers% %delay% 2>&1 | tee bot_output.txt
+echo [INFO] Starting Python bot script...
+python scripts\shopee_bot.py %session% %viewers% %delay% > bot_output.txt 2>&1
 set BOT_ERROR=%ERRORLEVEL%
 
 echo [%date% %time%] Bot exit code: %BOT_ERROR% >> %LOGFILE%
+echo [INFO] Bot finished with exit code: %BOT_ERROR%
 
 if %BOT_ERROR% NEQ 0 (
     echo.
-    echo [ERROR] Bot mengalami error!
-    echo Check bot_output.txt untuk detail error
+    echo [ERROR] Bot mengalami error! (Exit code: %BOT_ERROR%)
+    echo [INFO] Menampilkan output bot:
+    echo ----------------------------------------
+    type bot_output.txt
+    echo ----------------------------------------
+    echo Check bot_output.txt untuk detail error lengkap
     echo Check %LOGFILE% untuk debug info
+    echo.
     pause
+) else (
+    echo [OK] Bot selesai dengan sukses!
+    echo [INFO] Output bot:
+    echo ----------------------------------------
+    type bot_output.txt
+    echo ----------------------------------------
 )
 
 REM Cleanup temporary files  
