@@ -1,31 +1,18 @@
 @echo off
-title Bot Live Shopee - Ultimate Edition
+title Bot Live Shopee
 color 0A
 
 cls
 echo.
-echo ==============================================================================
-echo                      BOT LIVE SHOPEE - ULTIMATE EDITION
-echo                       Cookie Authentication + API Join
-echo ==============================================================================
+echo BOT LIVE SHOPEE
 echo.
-set /p session_id="Masukkan Session ID Live Shopee: "
-set /p viewer_count="Jumlah viewer yang diinginkan (default 10): "
+set /p session_id="Session ID: "
+set /p viewer_count="Jumlah viewer (default 10): "
 
 if "%viewer_count%"=="" set viewer_count=10
 
 echo.
-echo Bot akan mulai dengan:
-echo - Session ID: %session_id%
-echo - Target Viewer: %viewer_count%
-echo - Mode: Cookie Auth + API Join
-echo.
-echo Bot akan otomatis harvest cookies dan join live...
-echo Tekan Enter untuk mulai atau Ctrl+C untuk batal...
-pause >nul
-
-echo.
-echo [MEMULAI] Bot Live Shopee Ultimate...
+echo Memulai bot...
 cd /d "%~dp0"
 python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
 pause
