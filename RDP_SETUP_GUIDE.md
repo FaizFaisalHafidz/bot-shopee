@@ -1,5 +1,50 @@
 # SHOPEE MULTI VIEWER BOT - RDP SETUP GUIDE
 
+## 🚨 PYTHON ERROR FIX (WINDOWS RDP)
+
+**Error yang sering terjadi:**
+```
+Python tidak ditemukan; jalankan tanpa argumen untuk diinstal dari Microsoft Store, atau nonaktifkan pintasan ini dari Pengaturan > Aplikasi > Pengaturan aplikasi lanjutan > Alias eksekusi aplikasi.
+```
+
+### 🔧 QUICK FIX (Pilih salah satu):
+
+**Option 1 - Auto Fix Script:**
+```bash
+# Jalankan auto-fixer
+fix_python_rdp.bat
+```
+
+**Option 2 - PowerShell Fix:**
+```powershell
+# Run sebagai Administrator
+powershell -ExecutionPolicy Bypass -File fix_python_rdp.ps1
+```
+
+**Option 3 - Microsoft Store (Paling Mudah):**
+1. Buka Microsoft Store
+2. Cari "Python 3.11"
+3. Install dari Python Software Foundation
+4. Restart Command Prompt
+5. Test: `python --version`
+
+**Option 4 - Manual Download:**
+1. Go to: https://www.python.org/downloads/
+2. Download Python 3.11.5
+3. ✅ **CENTANG "Add Python to PATH"**
+4. Install as Administrator
+5. Restart Command Prompt
+
+### ✅ Verifikasi Python Working:
+```bash
+# Test commands
+python --version
+# atau
+py --version
+# atau  
+python3 --version
+```
+
 ## 🎯 CARA PENGGUNAAN DI RDP WINDOWS
 
 ### Step 1: Setup Google Profiles (Manual)
