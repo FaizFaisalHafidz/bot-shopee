@@ -16,5 +16,8 @@ if "%viewer_count%"=="" set viewer_count=10
 echo.
 echo Memulai bot...
 cd /d "%~dp0"
+echo Menjalankan: python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
 python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
+echo.
+echo Bot selesai atau error terjadi.
 pause
