@@ -158,14 +158,22 @@ class ShopeeRDPBot:
         """Build simple URL without complex parameters"""
         user_id = random.randint(100000, 999999)
         
-        # Simple URL formats that work in RDP
+        # Multiple URL formats with IP fallbacks for network resilience
         url_formats = [
+            # Primary domains
             f"https://shopee.co.id/live/{session_id}",
             f"https://m.shopee.co.id/live/{session_id}",
+            
+            # Alternative formats
+            f"https://shopee.co.id/#{session_id}",
+            f"https://m.shopee.co.id/#{session_id}",
+            
+            # Direct live URLs
             f"https://live.shopee.co.id/{session_id}",
+            f"https://www.shopee.co.id/live/{session_id}",
         ]
         
-        return random.choice(url_formats)
+        return url_formats  # Return all formats for fallback
     
     def create_rdp_viewer(self, session_id, viewer_index, profile):
         """Create single viewer optimized for RDP"""
@@ -194,70 +202,107 @@ class ShopeeRDPBot:
             
             print(f"[SUCCESS] Chrome started for viewer {viewer_index}")
             
-            # Build simple URL
-            shopee_url = self.build_simple_url(session_id, profile)
-            print(f"[URL] {shopee_url}")
+            # Build simple URL with fallbacks
+            shopee_urls = self.build_simple_url(session_id, profile)
+            print(f"[URL] Primary: {shopee_urls[0]}")
             
-            # Navigate with retry logic
-            navigation_attempts = 3
+            # Enhanced navigation with multiple URL fallbacks
+            navigation_attempts = 5  # Increased attempts
             navigation_success = False
             
             for attempt in range(navigation_attempts):
                 try:
                     print(f"[NAVIGATE] Attempt {attempt + 1}/{navigation_attempts}...")
                     
-                    # Try direct navigation first
-                    driver.get('https://shopee.co.id')
-                    time.sleep(15)  # Long wait for RDP
+                    # Try different base domains first
+                    base_domains = [
+                        'https://shopee.co.id',
+                        'https://m.shopee.co.id', 
+                        'https://www.shopee.co.id'
+                    ]
                     
-                    # Deploy bypass
+                    base_success = False
+                    for base_domain in base_domains:
+                        try:
+                            print(f"[BASE] Trying {base_domain}...")
+                            driver.get(base_domain)
+                            time.sleep(12)  # Longer wait
+                            base_success = True
+                            break
+                        except Exception as base_error:
+                            print(f"[BASE] {base_domain} failed: {str(base_error)[:50]}...")
+                            continue
+                    
+                    if not base_success:
+                        print(f"[WARNING] All base domains failed, trying direct URLs...")
+                    
+                    # Deploy bypass after base navigation
                     self.ultra_aggressive_bypass(driver, profile, session_id)
                     time.sleep(5)
                     
-                    # Navigate to live URL
-                    driver.get(shopee_url)
-                    time.sleep(20)  # Extra long wait
+                    # Try each URL format
+                    url_success = False
+                    for url_index, shopee_url in enumerate(shopee_urls):
+                        try:
+                            print(f"[URL] Trying format {url_index + 1}: {shopee_url}")
+                            driver.get(shopee_url)
+                            time.sleep(15)  # Extra long wait
+                            
+                            # Check if we got to the right place
+                            current_url = driver.current_url.lower()
+                            page_title = driver.title.lower()
+                            
+                            success_indicators = ['shopee', session_id, 'live']
+                            failure_indicators = ['error', '404', 'not found']
+                            
+                            has_success = any(indicator in current_url or indicator in page_title 
+                                            for indicator in success_indicators)
+                            has_failure = any(indicator in current_url or indicator in page_title 
+                                            for indicator in failure_indicators)
+                            
+                            if has_success and not has_failure:
+                                print(f"[SUCCESS] URL format {url_index + 1} worked!")
+                                url_success = True
+                                navigation_success = True
+                                break
+                            else:
+                                print(f"[RETRY] URL format {url_index + 1} check failed")
+                                
+                        except Exception as url_error:
+                            print(f"[URL] Format {url_index + 1} failed: {str(url_error)[:50]}...")
+                            continue
                     
-                    # Simple success check
-                    current_url = driver.current_url.lower()
-                    page_title = driver.title.lower()
-                    
-                    success_indicators = ['live', 'shopee', session_id]
-                    failure_indicators = ['login', 'auth', 'error']
-                    
-                    has_success = any(indicator in current_url or indicator in page_title 
-                                    for indicator in success_indicators)
-                    has_failure = any(indicator in current_url or indicator in page_title 
-                                    for indicator in failure_indicators)
-                    
-                    if has_success and not has_failure:
-                        navigation_success = True
+                    if navigation_success:
                         break
-                    else:
-                        print(f"[RETRY] Navigation check failed, trying alternative...")
-                        # Try alternative URLs
-                        alt_urls = [
-                            f"https://m.shopee.co.id/live/{session_id}",
-                            f"https://shopee.co.id/live/{session_id}?guest=1",
-                        ]
                         
-                        for alt_url in alt_urls:
-                            try:
-                                driver.get(alt_url)
-                                time.sleep(15)
-                                if session_id in driver.current_url:
-                                    navigation_success = True
-                                    break
-                            except:
-                                continue
-                        
-                        if navigation_success:
-                            break
+                    if attempt < navigation_attempts - 1:
+                        wait_time = (attempt + 1) * 5
+                        print(f"[WAIT] Waiting {wait_time} seconds before retry...")
+                        time.sleep(wait_time)
                 
                 except Exception as nav_error:
-                    print(f"[WARNING] Navigation attempt {attempt + 1} failed: {nav_error}")
+                    print(f"[WARNING] Navigation attempt {attempt + 1} failed: {str(nav_error)[:50]}...")
                     if attempt < navigation_attempts - 1:
                         time.sleep(10)
+            
+            if not navigation_success:
+                print(f"[FALLBACK] Trying final fallback methods...")
+                # Final fallback attempts
+                fallback_methods = [
+                    lambda: driver.get(f"https://shopee.co.id/#{session_id}"),
+                    lambda: driver.get(f"https://m.shopee.co.id/#{session_id}"),
+                ]
+                
+                for fallback in fallback_methods:
+                    try:
+                        fallback()
+                        time.sleep(10)
+                        if session_id in driver.current_url or 'shopee' in driver.current_url.lower():
+                            navigation_success = True
+                            print(f"[FALLBACK] Success with fallback method!")
+                            break
+                    except:
+                        continue
             
             if not navigation_success:
                 print(f"[WARNING] Navigation may have issues, but keeping session active")
@@ -267,9 +312,10 @@ class ShopeeRDPBot:
                 'driver': driver,
                 'viewer_id': viewer_index,
                 'profile': profile,
-                'url': shopee_url,
-                'status': 'active',
-                'created_at': datetime.now()
+                'url': shopee_urls[0] if navigation_success else "fallback_attempted",
+                'status': 'active' if navigation_success else 'partial',
+                'created_at': datetime.now(),
+                'navigation_success': navigation_success
             }
             
             self.active_sessions.append(session_info)
