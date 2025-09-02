@@ -245,20 +245,40 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         print(f"   [DEBUG] User Data Dir: {user_data_dir}")
         print(f"   [DEBUG] Profile Directory: {profile_directory}")
         
-        # Essential Chrome options
-        options.add_argument(f'--user-data-dir="{user_data_dir}"')
-        options.add_argument(f'--profile-directory="{profile_directory}"')
+        # Verify paths exist
+        profile_full_path = os.path.join(user_data_dir, profile_directory)
+        if os.path.exists(user_data_dir):
+            print(f"   [DEBUG] ✅ User Data directory exists")
+        else:
+            print(f"   [WARNING] ❌ User Data directory NOT found")
+            
+        if os.path.exists(profile_full_path):
+            print(f"   [DEBUG] ✅ Profile directory exists: {profile_full_path}")
+        else:
+            print(f"   [WARNING] ❌ Profile directory NOT found: {profile_full_path}")
+            # List available profiles for debugging
+            if os.path.exists(user_data_dir):
+                available_profiles = [d for d in os.listdir(user_data_dir) if os.path.isdir(os.path.join(user_data_dir, d))]
+                print(f"   [DEBUG] Available profiles: {available_profiles[:5]}...")  # Show first 5
+        
+        # Simplified Chrome options - minimize conflicts
+        options.add_argument(f'--user-data-dir={user_data_dir}')
+        options.add_argument(f'--profile-directory={profile_directory}')
         options.add_argument(f'--remote-debugging-port={9222 + viewer_num}')
         
-        # Basic options
+        # Essential stability options
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--disable-infobars')
+        options.add_argument('--disable-extensions')
         
-        # Windows specific fixes (minimal to avoid conflicts)
+        # Windows RDP compatibility
         if os.name == 'nt':
-            options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-software-rasterizer')
         
         # Anti-detection
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -292,25 +312,46 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         else:
             print(f"   [WARNING] Chrome executable not found, may use Chromium")
         
-        # Create driver with simplified approach
+        # Create driver with most stable approach
+        driver = None
+        
+        # Method 1: Try without webdriver-manager (direct system driver)
         try:
-            # Try webdriver-manager first (most compatible)
-            from webdriver_manager.chrome import ChromeDriverManager
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
-            print(f"   [SUCCESS] Chrome launched via ChromeDriverManager")
+            print(f"   [DEBUG] Attempting system ChromeDriver...")
+            driver = webdriver.Chrome(options=options)
+            print(f"   [SUCCESS] System ChromeDriver worked!")
+            
         except Exception as e:
-            print(f"   [DEBUG] ChromeDriverManager failed: {e}")
+            print(f"   [DEBUG] System driver failed: {str(e)[:100]}...")
+            
+            # Method 2: Try webdriver-manager as fallback
             try:
-                # Fallback to system chromedriver
-                service = Service()
+                print(f"   [DEBUG] Attempting ChromeDriverManager...")
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
                 driver = webdriver.Chrome(service=service, options=options)
-                print(f"   [SUCCESS] Chrome launched with system driver")
+                print(f"   [SUCCESS] ChromeDriverManager worked!")
+                
             except Exception as e2:
-                print(f"   [ERROR] Both driver methods failed:")
-                print(f"         ChromeDriverManager: {e}")
-                print(f"         System driver: {e2}")
-                return None
+                print(f"   [ERROR] All driver methods failed:")
+                print(f"   System: {str(e)[:80]}")
+                print(f"   Manager: {str(e2)[:80]}")
+                
+                # Method 3: Last resort - try minimal options
+                try:
+                    print(f"   [DEBUG] Trying minimal Chrome options...")
+                    minimal_options = Options()
+                    minimal_options.add_argument(f'--user-data-dir={user_data_dir}')
+                    minimal_options.add_argument(f'--profile-directory={profile_directory}')
+                    if chrome_executable:
+                        minimal_options.binary_location = chrome_executable
+                    
+                    driver = webdriver.Chrome(options=minimal_options)
+                    print(f"   [SUCCESS] Minimal options worked!")
+                    
+                except Exception as e3:
+                    print(f"   [FINAL ERROR] All methods failed: {str(e3)[:80]}")
+                    return None
         
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
