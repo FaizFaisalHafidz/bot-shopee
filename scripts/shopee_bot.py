@@ -197,8 +197,23 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         # IMPORTANT: Use existing Chrome profile directly
         # This preserves login sessions
         if os.name == 'nt':  # Windows
-            # For Windows: C:\Users\...\Chrome\User Data\Profile 1
-            if "User Data" in original_profile_path:
+            # Convert macOS path to Windows path if needed
+            if original_profile_path.startswith('/Users/'):
+                # This is a macOS path, need to convert to Windows
+                print(f"   [DEBUG] Converting macOS path to Windows path")
+                profile_name = name
+                if profile_name.lower() == 'default':
+                    user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
+                    options.add_argument(f'--user-data-dir="{user_data_dir}"')
+                else:
+                    user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
+                    options.add_argument(f'--user-data-dir="{user_data_dir}"')
+                    options.add_argument(f'--profile-directory="{profile_name}"')
+                
+                print(f"   [DEBUG] Windows User Data: {user_data_dir}")
+                print(f"   [DEBUG] Profile Directory: {profile_name}")
+            elif "User Data" in original_profile_path:
+                # Already Windows path
                 user_data_dir = original_profile_path.split("User Data")[0] + "User Data"
                 profile_name = original_profile_path.split("User Data")[-1].strip("\\/")
                 
@@ -210,7 +225,12 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
                     options.add_argument(f'--profile-directory="{profile_name}"')
             else:
                 print(f"   [WARNING] Unexpected Windows profile path: {original_profile_path}")
-                options.add_argument(f'--user-data-dir="{original_profile_path}"')
+                # Fallback: construct Windows path from profile name
+                profile_name = name
+                user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
+                options.add_argument(f'--user-data-dir="{user_data_dir}"')
+                if profile_name.lower() != "default":
+                    options.add_argument(f'--profile-directory="{profile_name}"')
         else:  # macOS/Linux  
             # For macOS: /Users/.../Google/Chrome/Profile 1
             if "Chrome" in original_profile_path:
