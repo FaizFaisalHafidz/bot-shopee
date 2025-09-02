@@ -33,52 +33,72 @@ def create_temp_profile_copy(source_profile_path, temp_dir, profile_name):
         print(f"   [INFO] Copying profile from: {source_profile_path}")
         print(f"   [INFO] To temporary location: {temp_profile_path}")
         
-        # Copy essential Chrome profile files
+        # Create temp profile directory structure like Chrome expects
         os.makedirs(temp_profile_path, exist_ok=True)
+        default_dir = os.path.join(temp_profile_path, "Default")
+        os.makedirs(default_dir, exist_ok=True)
         
-        essential_files = [
-            'Preferences',
+        # Essential files to copy to the temp profile root
+        root_files = [
+            'Preferences', 
             'Local State',
+            'Secure Preferences'
+        ]
+        
+        # Essential files to copy to Default subdirectory  
+        default_files = [
             'Cookies',
-            'Login Data',
+            'Login Data', 
             'Web Data',
             'History',
             'Bookmarks',
-            'Secure Preferences',
-            'Network Action Predictor'
+            'Network Action Predictor',
+            'Preferences'
         ]
         
         essential_dirs = [
-            'Default',
-            'Extension Cookies',
             'Extension State',
             'Local Extension Settings',
             'Sync Extension Settings'
         ]
         
-        # Copy files
-        for file_name in essential_files:
+        # Copy root files
+        for file_name in root_files:
             src_file = os.path.join(source_profile_path, file_name)
             dst_file = os.path.join(temp_profile_path, file_name)
             
             if os.path.exists(src_file):
                 try:
                     shutil.copy2(src_file, dst_file)
-                    print(f"     ✓ Copied: {file_name}")
+                    print(f"     ✓ Copied to root: {file_name}")
                 except Exception as e:
-                    print(f"     ✗ Failed to copy {file_name}: {e}")
+                    print(f"     ✗ Failed to copy {file_name} to root: {e}")
             else:
                 print(f"     - Not found: {file_name}")
         
-        # Copy directories
+        # Copy default files to Default directory
+        for file_name in default_files:
+            src_file = os.path.join(source_profile_path, file_name)
+            dst_file = os.path.join(default_dir, file_name)
+            
+            if os.path.exists(src_file):
+                try:
+                    shutil.copy2(src_file, dst_file)
+                    print(f"     ✓ Copied to Default: {file_name}")
+                except Exception as e:
+                    print(f"     ✗ Failed to copy {file_name} to Default: {e}")
+            else:
+                print(f"     - Not found: {file_name}")
+        
+        # Copy directories to Default
         for dir_name in essential_dirs:
             src_dir = os.path.join(source_profile_path, dir_name)
-            dst_dir = os.path.join(temp_profile_path, dir_name)
+            dst_dir = os.path.join(default_dir, dir_name)
             
             if os.path.exists(src_dir):
                 try:
-                    shutil.copytree(src_dir, dst_dir)
-                    print(f"     ✓ Copied directory: {dir_name}")
+                    shutil.copytree(src_dir, dst_dir, ignore_errors=True)
+                    print(f"     ✓ Copied directory to Default: {dir_name}")
                 except Exception as e:
                     print(f"     ✗ Failed to copy directory {dir_name}: {e}")
             else:

@@ -41,7 +41,22 @@ def get_available_profiles():
             with open(temp_bot_profiles_path, 'r', encoding='utf-8') as f:
                 profiles = json.load(f)
                 print(f"[DEBUG] Loaded {len(profiles)} temporary bot profiles")
-                return profiles
+                # Filter out profiles with Unknown emails
+                valid_profiles = [p for p in profiles if p.get('email', 'Unknown') != 'Unknown']
+                print(f"[INFO] Found {len(valid_profiles)} valid profiles with known emails")
+                return valid_profiles
+        
+        # Try parent directory for temp bot profiles
+        parent_temp_profiles_path = 'temp_bot_profiles.json'
+        if os.path.exists(parent_temp_profiles_path):
+            print("[INFO] Using temporary bot profiles from parent directory...")
+            with open(parent_temp_profiles_path, 'r', encoding='utf-8') as f:
+                profiles = json.load(f)
+                print(f"[DEBUG] Loaded {len(profiles)} temporary bot profiles")
+                # Filter out profiles with Unknown emails
+                valid_profiles = [p for p in profiles if p.get('email', 'Unknown') != 'Unknown']
+                print(f"[INFO] Found {len(valid_profiles)} valid profiles with known emails")
+                return valid_profiles
         
         # Fallback to regular detected profiles  
         print("[DEBUG] Trying to read temp_profiles.json...")
@@ -61,7 +76,10 @@ def get_available_profiles():
         with open('temp_profiles.json', 'r', encoding='utf-8') as f:
             profiles = json.load(f)
             print(f"[DEBUG] Loaded {len(profiles)} profiles from JSON")
-            return profiles
+            # Filter out profiles with Unknown emails
+            valid_profiles = [p for p in profiles if p.get('email', 'Unknown') != 'Unknown']
+            print(f"[INFO] Found {len(valid_profiles)} valid profiles with known emails")
+            return valid_profiles
     except json.JSONDecodeError as e:
         print(f"[ERROR] JSON decode error: {e}")
         return []
@@ -90,7 +108,12 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         # Handle different profile path structures
         if "temp_bot_profiles" in profile_path:
             # For temp profiles, use the full path as user-data-dir
+            print(f"   [DEBUG] Using temporary profile setup")
             options.add_argument(f'--user-data-dir={profile_path}')
+            
+            # Add unique profile directory to avoid conflicts
+            temp_profile_dir = f"TempProfile_{viewer_num}"
+            options.add_argument(f'--profile-directory={temp_profile_dir}')
         elif "User Data" in profile_path:
             # For paths like: C:\Users\...\Chrome\User Data\Profile 1
             # We want: C:\Users\...\Chrome\User Data
