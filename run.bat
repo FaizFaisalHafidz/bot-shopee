@@ -68,9 +68,9 @@ echo.
 
 REM Jalankan script deteksi profile
 echo [INFO] Menjalankan detect_profiles.py...
-echo [%date% %time%] Running detect_profiles.py >> %LOGFILE%
+echo [%date% %time%] Running detect_profiles_clean.py >> %LOGFILE%
 
-python scripts\detect_profiles.py > temp_profile_output.txt 2>&1
+python scripts\detect_profiles_clean.py > temp_profile_output.txt 2>&1
 set DETECTION_ERROR=%ERRORLEVEL%
 
 echo [%date% %time%] detect_profiles.py exit code: %DETECTION_ERROR% >> %LOGFILE%
