@@ -1,33 +1,73 @@
 @echo off
-title SHOPEE ULTIMATE REAL URL BOT - FINAL DEPLOYMENT
-color 0a
+chcp 65001
+cls
 
+:menu
+echo ===============================================================================
+echo                    SHOPEE LIVE BOT - ULTIMATE LAUNCHER
+echo                         Choose your preferred method
+echo ===============================================================================
+echo.
+echo Available Bot Options:
+echo.
+echo [1] MONITORED BOT (CLIENT GRADE)   - Real-time monitoring + 100 viewers
+echo [2] API Bot (RECOMMENDED)          - Direct API calls, most reliable  
+echo [3] Ultra RDP Bot                  - Browser automation for RDP
+echo [4] Device Fingerprint Bot         - Advanced device spoofing
+echo [5] Auth Bypass Bot                - Authentication bypass method
+echo [6] Quick Launch (Auto-detect)     - Smart launcher selection
+echo.
+echo [0] Exit
 echo.
 echo ===============================================================================
-echo    SHOPEE ULTIMATE REAL URL BOT - FINAL DEPLOYMENT FOR RDP
-echo    Complete Authentication Bypass + Real URL Structure + Device Diversity
+echo Recommendations:
+echo • For CLIENT REQUESTS (50-100 viewers): Use MONITORED BOT (#1)
+echo • For RELIABLE RESULTS: Use API Bot (#2) 
+echo • For RDP DEPLOYMENT: Use Ultra RDP Bot (#3)
 echo ===============================================================================
 echo.
 
-REM Check if Python is installed
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: Python not found! Please install Python 3.7+ first.
-    echo Download from: https://www.python.org/downloads/
-    pause
-    exit /b 1
-)
+set /p choice="Select option (1-6, 0 to exit): "
 
-REM Check if virtual environment exists
-if not exist "venv" (
-    echo [SETUP] Creating virtual environment...
-    python -m venv venv
-    call venv\Scripts\activate.bat
-    pip install selenium webdriver-manager requests
-) else (
-    echo [SETUP] Activating existing virtual environment...
-    call venv\Scripts\activate.bat
-)
+if "%choice%"=="1" goto monitored_bot
+if "%choice%"=="2" goto api_bot
+if "%choice%"=="3" goto ultra_rdp
+if "%choice%"=="4" goto device_fingerprint
+if "%choice%"=="5" goto auth_bypass
+if "%choice%"=="6" goto quick_launch
+if "%choice%"=="0" goto exit
+
+echo Invalid choice. Please try again.
+pause
+goto menu
+
+:monitored_bot
+echo.
+echo ===============================================================================
+echo    LAUNCHING: SHOPEE MONITORED BOT (CLIENT GRADE SOLUTION)
+echo    - Real-time viewer count monitoring via API
+echo    - Progressive scaling up to 100 viewers  
+echo    - Verified results with success validation
+echo    - Perfect for high-volume client requests
+echo ===============================================================================
+echo.
+call monitored_launcher.bat
+goto menu
+
+:api_bot
+echo.
+echo ===============================================================================
+echo    LAUNCHING: SHOPEE API BOT (Direct API Approach)
+echo    - Uses official Shopee Live API endpoints
+echo    - No browser required - pure API calls
+echo    - Maximum reliability for RDP/VPS
+echo    - Real viewer count increase
+echo ===============================================================================
+echo.
+call api_launcher.bat
+goto menu
+
+:ultra_rdp
 
 REM Verify dependencies
 echo [CHECK] Verifying dependencies...

@@ -331,95 +331,188 @@ class ShopeeUltraRDPBot:
         """)
     
     def create_ultra_viewer(self, session_id, viewer_index):
-        """Create ultra-optimized viewer for RDP"""
+        """Create ultra-optimized viewer for RDP with robust error handling"""
         driver = None
-        try:
-            profile = self.generate_device_profile(viewer_index - 1)
-            shopee_url = self.build_shopee_url(session_id, profile)
-            
-            print(f"[ULTRA VIEWER {viewer_index}] Creating ultra-optimized viewer...")
-            print(f"[DEVICE] {profile['platform']} - User ID: {profile['user_id']}")
-            print(f"[URL] {shopee_url[:100]}...")
-            
-            # Create ultra Chrome options
-            chrome_options = self.create_ultra_chrome_options(profile, viewer_index)
-            
-            # Start Chrome
-            print(f"[CHROME] Starting ultra-optimized Chrome...")
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-            
-            # Set timeouts
-            driver.set_page_load_timeout(45)
-            driver.implicitly_wait(10)
-            
-            print(f"[CHROME] Chrome started successfully for viewer {viewer_index}")
-            
-            # First go to Shopee main page
-            print(f"[NAVIGATE] Accessing Shopee main page...")
-            driver.get('https://shopee.co.id')
-            time.sleep(8)
-            
-            # Deploy ultra-aggressive bypass
-            self.ultra_aggressive_bypass(driver, profile, session_id)
-            
-            # Navigate to live URL
-            print(f"[NAVIGATE] Accessing Shopee Live URL...")
-            driver.get(shopee_url)
-            time.sleep(12)
-            
-            # Check if bypassed
-            current_url = driver.current_url.lower()
-            if 'login' in current_url or 'auth' in current_url:
-                print(f"[ULTRA BYPASS] Still on auth page, applying emergency bypass...")
+        max_retries = 3
+        
+        for attempt in range(max_retries):
+            try:
+                profile = self.generate_device_profile(viewer_index - 1)
+                shopee_url = self.build_shopee_url(session_id, profile)
                 
-                # Emergency bypass methods
-                emergency_bypasses = [
-                    # Method 1: Force navigation
-                    lambda: driver.get(shopee_url.replace('share?', 'share?guest=1&')),
-                    
-                    # Method 2: Mobile URL
-                    lambda: driver.get(f"https://m.shopee.co.id/live/{session_id}"),
-                    
-                    # Method 3: Direct API style
-                    lambda: driver.get(f"https://live.shopee.co.id/{session_id}?viewer=1")
-                ]
+                print(f"[ULTRA VIEWER {viewer_index}] Creating ultra-optimized viewer (attempt {attempt + 1}/{max_retries})...")
+                print(f"[DEVICE] {profile['platform']} - User ID: {profile['user_id']}")
+                print(f"[URL] {shopee_url[:100]}...")
                 
-                for i, method in enumerate(emergency_bypasses):
+                # Create ultra Chrome options
+                chrome_options = self.create_ultra_chrome_options(profile, viewer_index)
+                
+                # Start Chrome
+                print(f"[CHROME] Starting ultra-optimized Chrome...")
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                
+                # Set timeouts with retry logic
+                driver.set_page_load_timeout(60)  # Longer timeout
+                driver.implicitly_wait(15)
+                
+                print(f"[CHROME] Chrome started successfully for viewer {viewer_index}")
+                
+                # Robust navigation with retries
+                navigation_success = False
+                nav_attempts = 3
+                
+                for nav_attempt in range(nav_attempts):
                     try:
-                        print(f"[EMERGENCY] Trying bypass method {i+1}...")
-                        method()
-                        time.sleep(8)
-                        if 'login' not in driver.current_url.lower():
-                            print(f"[SUCCESS] Emergency bypass method {i+1} worked!")
-                            break
-                    except Exception as e:
-                        print(f"[WARNING] Emergency method {i+1} failed: {e}")
-            
-            # Inject mega booster
-            self.inject_mega_booster(driver, profile)
-            
-            # Add to active sessions
-            self.active_sessions.append({
-                'driver': driver,
-                'viewer_id': viewer_index,
-                'profile': profile,
-                'url': shopee_url,
-                'bypassed': 'login' not in driver.current_url.lower(),
-                'created_at': datetime.now()
-            })
-            
-            print(f"[SUCCESS] Ultra viewer {viewer_index} active!")
-            return driver
-            
-        except Exception as e:
-            print(f"[ERROR] Failed to create ultra viewer {viewer_index}: {e}")
-            if driver:
+                        print(f"[NAVIGATE] Accessing Shopee main page (attempt {nav_attempt + 1}/{nav_attempts})...")
+                        driver.get('https://shopee.co.id')
+                        time.sleep(10)  # Longer wait for RDP
+                        navigation_success = True
+                        break
+                    except Exception as nav_error:
+                        print(f"[WARNING] Navigation attempt {nav_attempt + 1} failed: {nav_error}")
+                        if nav_attempt < nav_attempts - 1:
+                            time.sleep(5)  # Wait before retry
+                        else:
+                            # Try alternative domains
+                            alt_domains = ['https://m.shopee.co.id', 'https://www.shopee.co.id']
+                            for alt_domain in alt_domains:
+                                try:
+                                    print(f"[FALLBACK] Trying alternative domain: {alt_domain}")
+                                    driver.get(alt_domain)
+                                    time.sleep(8)
+                                    navigation_success = True
+                                    break
+                                except:
+                                    continue
+                
+                if not navigation_success:
+                    raise Exception("Failed to navigate to any Shopee domain")
+                
+                # Deploy ultra-aggressive bypass
+                self.ultra_aggressive_bypass(driver, profile, session_id)
+                
+                # Navigate to live URL with retries
+                live_navigation_success = False
+                for live_attempt in range(3):
+                    try:
+                        print(f"[NAVIGATE] Accessing Shopee Live URL (attempt {live_attempt + 1}/3)...")
+                        driver.get(shopee_url)
+                        time.sleep(15)  # Longer wait
+                        live_navigation_success = True
+                        break
+                    except Exception as live_error:
+                        print(f"[WARNING] Live URL navigation attempt {live_attempt + 1} failed: {live_error}")
+                        if live_attempt < 2:
+                            time.sleep(8)
+                
+                if not live_navigation_success:
+                    print(f"[WARNING] Live URL navigation failed, trying emergency bypasses...")
+                
+                # Check if bypassed with enhanced detection
+                bypassed = True
                 try:
-                    driver.quit()
-                except:
-                    pass
-            return None
+                    current_url = driver.current_url.lower()
+                    page_title = driver.title.lower()
+                    
+                    if 'login' in current_url or 'auth' in current_url or 'login' in page_title:
+                        bypassed = False
+                        print(f"[ULTRA BYPASS] Still on auth page, applying emergency bypass...")
+                        
+                        # Enhanced emergency bypass methods
+                        emergency_bypasses = [
+                            # Method 1: Force navigation with guest parameter
+                            lambda: self.emergency_bypass_method_1(driver, shopee_url),
+                            
+                            # Method 2: Mobile fallback (skip if failed before)
+                            lambda: self.emergency_bypass_method_2(driver, session_id) if attempt == 0 else None,
+                            
+                            # Method 3: Direct API style
+                            lambda: self.emergency_bypass_method_3(driver, session_id),
+                            
+                            # Method 4: Alternative live URL format
+                            lambda: self.emergency_bypass_method_4(driver, session_id, profile)
+                        ]
+                        
+                        for i, method in enumerate(emergency_bypasses):
+                            if method is None:
+                                continue
+                            try:
+                                print(f"[EMERGENCY] Trying bypass method {i+1}...")
+                                method()
+                                time.sleep(12)
+                                
+                                # Check if method worked
+                                new_url = driver.current_url.lower()
+                                new_title = driver.title.lower()
+                                if 'login' not in new_url and 'auth' not in new_url and 'login' not in new_title:
+                                    print(f"[SUCCESS] Emergency bypass method {i+1} worked!")
+                                    bypassed = True
+                                    break
+                            except Exception as emergency_error:
+                                print(f"[WARNING] Emergency method {i+1} failed: {emergency_error}")
+                
+                except Exception as check_error:
+                    print(f"[WARNING] Could not check bypass status: {check_error}")
+                    bypassed = True  # Assume success if we can't check
+                
+                # Inject mega booster
+                try:
+                    self.inject_mega_booster(driver, profile)
+                except Exception as booster_error:
+                    print(f"[WARNING] Mega booster injection failed: {booster_error}")
+                
+                # Add to active sessions
+                self.active_sessions.append({
+                    'driver': driver,
+                    'viewer_id': viewer_index,
+                    'profile': profile,
+                    'url': shopee_url,
+                    'bypassed': bypassed,
+                    'created_at': datetime.now(),
+                    'attempt': attempt + 1
+                })
+                
+                print(f"[SUCCESS] Ultra viewer {viewer_index} active! (Attempt {attempt + 1})")
+                return driver
+                
+            except Exception as e:
+                print(f"[ERROR] Attempt {attempt + 1} failed to create ultra viewer {viewer_index}: {e}")
+                if driver:
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+                    driver = None
+                
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 10  # Progressive wait
+                    print(f"[RETRY] Waiting {wait_time} seconds before retry...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"[FAILED] All {max_retries} attempts failed for viewer {viewer_index}")
+        
+        return None
+    
+    def emergency_bypass_method_1(self, driver, shopee_url):
+        """Emergency method 1: Guest parameter"""
+        guest_url = shopee_url.replace('share?', 'share?guest=1&')
+        driver.get(guest_url)
+    
+    def emergency_bypass_method_2(self, driver, session_id):
+        """Emergency method 2: Mobile URL"""
+        mobile_url = f"https://m.shopee.co.id/live/{session_id}"
+        driver.get(mobile_url)
+    
+    def emergency_bypass_method_3(self, driver, session_id):
+        """Emergency method 3: Direct API style"""
+        direct_url = f"https://live.shopee.co.id/{session_id}?viewer=1"
+        driver.get(direct_url)
+    
+    def emergency_bypass_method_4(self, driver, session_id, profile):
+        """Emergency method 4: Alternative live URL format"""
+        alt_url = f"https://live.shopee.co.id/live?session={session_id}&user={profile['user_id']}&mobile=1"
+        driver.get(alt_url)
     
     def start_ultra_bot(self, session_id, viewer_count=3):
         """Start ultra-optimized bot for RDP"""
