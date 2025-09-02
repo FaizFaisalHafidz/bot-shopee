@@ -309,26 +309,57 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         options.add_experimental_option('useAutomationExtension', False)
         options.add_experimental_option("detach", True)
         
-        # Enhanced Chrome detection
+        # Enhanced Chrome detection - MUST WORK!
         chrome_paths = check_chrome_installation()
         
         if not chrome_paths:
             print(f"   [CRITICAL ERROR] No Chrome installation found!")
-            print(f"   [INFO] Available options:")
-            print(f"     1. Install Google Chrome (recommended)")
-            print(f"     2. Use Chromium with auth bypass (experimental)")
-            print(f"   [DECISION] Proceeding with Chromium + auth bypass...")
-            chrome_executable = None
+            print(f"   [EMERGENCY] Searching system for any Chrome...")
+            
+            # Emergency Chrome search
+            if os.name == 'nt':
+                import glob
+                emergency_paths = []
+                # Search all drives and common locations
+                search_patterns = [
+                    r"C:\**\Google\Chrome\Application\chrome.exe",
+                    r"D:\**\Google\Chrome\Application\chrome.exe", 
+                    r"*:\Program Files*\Google\Chrome\Application\chrome.exe"
+                ]
+                
+                for pattern in search_patterns:
+                    try:
+                        emergency_paths.extend(glob.glob(pattern, recursive=True))
+                    except:
+                        pass
+                        
+                if emergency_paths:
+                    chrome_executable = emergency_paths[0]
+                    print(f"   [EMERGENCY SUCCESS] Found Chrome: {chrome_executable}")
+                else:
+                    print(f"   [FATAL] No Chrome found anywhere - using default browser")
+                    chrome_executable = None
+            else:
+                chrome_executable = None
         else:
             chrome_executable = chrome_paths[0]  # Use first found Chrome
-            options.binary_location = chrome_executable
             print(f"   [SUCCESS] Using Chrome: {chrome_executable}")
+            
+        # Set Chrome binary
+        if chrome_executable:
+            options.binary_location = chrome_executable
+            print(f"   [CONFIRMED] Chrome binary set: {chrome_executable}")
             
             # Verify this is actual Chrome, not Chromium
             if "chromium" in chrome_executable.lower():
                 print(f"   [WARNING] Detected Chromium path, will use auth bypass")
+                use_auth_bypass = True
             else:
                 print(f"   [SUCCESS] Confirmed Google Chrome installation")
+                use_auth_bypass = False
+        else:
+            print(f"   [WARNING] No Chrome binary - using system default + auth bypass")
+            use_auth_bypass = True
         
         # Create driver with most stable approach
         driver = None
@@ -374,45 +405,112 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         # Remove automation indicators and add auth bypass
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        # Auto-bypass authentication if using fresh profile
-        if not chrome_executable or "chromium" in str(chrome_executable).lower():
-            print(f"   [INFO] Detected Chromium - will attempt auth bypass")
+        # Smart auth bypass based on browser type
+        if use_auth_bypass:
+            print(f"   [BYPASS] Attempting authentication bypass for: {email}")
             try:
-                # Navigate to Google login and attempt bypass
-                driver.get("https://accounts.google.com/signin")
+                # Method 1: Try existing profile first
+                driver.get("https://accounts.google.com/")
                 time.sleep(2)
                 
-                # Inject auth bypass script
-                bypass_script = """
-                // Auto-fill login form if possible
-                const emailInput = document.querySelector('input[type="email"]');
-                const emailFromProfile = arguments[0];
-                
-                if (emailInput && emailFromProfile) {
-                    emailInput.value = emailFromProfile;
-                    emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                # Check if already logged in
+                if "myaccount.google.com" in driver.current_url or "accounts.google.com/signin" not in driver.current_url:
+                    print(f"   [BYPASS] Already logged in - profile worked!")
+                else:
+                    print(f"   [BYPASS] Not logged in - attempting auto-login")
                     
-                    // Try to find and click next button
-                    setTimeout(() => {
-                        const nextBtn = document.querySelector('#identifierNext button');
-                        if (nextBtn) nextBtn.click();
-                    }, 1000);
+                    # Navigate to login page
+                    driver.get("https://accounts.google.com/signin")
+                    time.sleep(3)
                     
-                    console.log('[BYPASS] Email auto-filled:', emailFromProfile);
-                } else {
-                    console.log('[BYPASS] Could not find email input or email data');
-                }
-                """
-                
-                driver.execute_script(bypass_script, email)
-                print(f"   [BYPASS] Auth bypass attempted for: {email}")
-                
-                # Wait a bit for any auto-actions
-                time.sleep(3)
+                    # Enhanced auth bypass script
+                    bypass_script = """
+                    // Enhanced login bypass
+                    function attemptLogin(email) {
+                        console.log('[BYPASS] Starting login attempt for:', email);
+                        
+                        // Find email input
+                        const emailSelectors = [
+                            'input[type="email"]',
+                            'input[name="identifier"]',
+                            '#identifierId',
+                            'input[aria-label*="email"]'
+                        ];
+                        
+                        let emailInput = null;
+                        for (let selector of emailSelectors) {
+                            emailInput = document.querySelector(selector);
+                            if (emailInput) break;
+                        }
+                        
+                        if (emailInput && email) {
+                            emailInput.value = email;
+                            emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            
+                            console.log('[BYPASS] Email filled:', email);
+                            
+                            // Find and click next button
+                            setTimeout(() => {
+                                const nextSelectors = [
+                                    '#identifierNext',
+                                    'button[type="submit"]',
+                                    'input[type="submit"]',
+                                    'button:contains("Next")',
+                                    '[data-primary-action-label]'
+                                ];
+                                
+                                let nextBtn = null;
+                                for (let selector of nextSelectors) {
+                                    nextBtn = document.querySelector(selector);
+                                    if (nextBtn) break;
+                                }
+                                
+                                if (nextBtn) {
+                                    nextBtn.click();
+                                    console.log('[BYPASS] Next button clicked');
+                                } else {
+                                    // Try finding by text
+                                    const buttons = document.querySelectorAll('button');
+                                    for (let btn of buttons) {
+                                        if (btn.textContent.includes('Next') || btn.textContent.includes('Berikutnya')) {
+                                            btn.click();
+                                            console.log('[BYPASS] Next button found by text');
+                                            break;
+                                        }
+                                    }
+                                }
+                            }, 1000);
+                            
+                            return true;
+                        }
+                        
+                        console.log('[BYPASS] Could not find email input');
+                        return false;
+                    }
+                    
+                    return attemptLogin(arguments[0]);
+                    """
+                    
+                    result = driver.execute_script(bypass_script, email)
+                    print(f"   [BYPASS] Auto-login script executed: {result}")
+                    
+                    # Wait for potential auto-actions
+                    time.sleep(5)
+                    
+                    # Check if we need to handle password
+                    current_url = driver.current_url
+                    if "password" in current_url.lower() or "signin/challenge" in current_url:
+                        print(f"   [BYPASS] Password step detected - manual intervention needed")
+                        print(f"   [INFO] Please complete login manually in the browser")
+                        print(f"   [INFO] Bot will wait 30 seconds for manual login...")
+                        time.sleep(30)
                 
             except Exception as bypass_error:
                 print(f"   [WARNING] Auth bypass failed: {bypass_error}")
-                print(f"   [INFO] Will continue with manual login if needed")
+                print(f"   [INFO] Continuing with manual login if needed")
+        else:
+            print(f"   [INFO] Using existing Chrome profile - should be pre-logged in")
         
         print(f"   [SUCCESS] Chrome opened with profile: {email}")
         return driver
