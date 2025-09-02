@@ -34,51 +34,35 @@ def generate_device_id():
 def get_available_profiles():
     """Ambil daftar profile Chrome yang sudah dideteksi"""
     try:
-        # Try temp bot profiles first (safer for automation)
-        temp_bot_profiles_path = '../temp_bot_profiles.json'
-        if os.path.exists(temp_bot_profiles_path):
-            print("[INFO] Using temporary bot profiles...")
-            with open(temp_bot_profiles_path, 'r', encoding='utf-8') as f:
-                profiles = json.load(f)
-                print(f"[DEBUG] Loaded {len(profiles)} temporary bot profiles")
-                # Filter out profiles with Unknown emails
-                valid_profiles = [p for p in profiles if p.get('email', 'Unknown') != 'Unknown']
-                print(f"[INFO] Found {len(valid_profiles)} valid profiles with known emails")
-                return valid_profiles
+        # Skip temp profiles untuk sementara, langsung pakai original profiles
+        print("[INFO] Using original Chrome profiles (bypassing temp system)...")
         
-        # Try parent directory for temp bot profiles
-        parent_temp_profiles_path = 'temp_bot_profiles.json'
-        if os.path.exists(parent_temp_profiles_path):
-            print("[INFO] Using temporary bot profiles from parent directory...")
-            with open(parent_temp_profiles_path, 'r', encoding='utf-8') as f:
-                profiles = json.load(f)
-                print(f"[DEBUG] Loaded {len(profiles)} temporary bot profiles")
-                # Filter out profiles with Unknown emails
-                valid_profiles = [p for p in profiles if p.get('email', 'Unknown') != 'Unknown']
-                print(f"[INFO] Found {len(valid_profiles)} valid profiles with known emails")
-                return valid_profiles
+        # Read temp_profiles.json directly
+        profiles_file = '../temp_profiles.json' if os.path.exists('../temp_profiles.json') else 'temp_profiles.json'
         
-        # Fallback to regular detected profiles  
-        print("[DEBUG] Trying to read temp_profiles.json...")
-        if not os.path.exists('temp_profiles.json'):
-            print("[ERROR] temp_profiles.json file not found!")
+        print(f"[DEBUG] Trying to read: {profiles_file}")
+        if not os.path.exists(profiles_file):
+            print("[ERROR] Profile file not found!")
             print("[DEBUG] Current directory:", os.getcwd())
             print("[DEBUG] Files in current directory:", [f for f in os.listdir('.') if not f.startswith('.')])
             return []
             
-        with open('temp_profiles.json', 'r', encoding='utf-8') as f:
-            content = f.read()
-            print(f"[DEBUG] File content length: {len(content)} characters")
-            if not content.strip():
-                print("[ERROR] temp_profiles.json is empty!")
-                return []
-                
-        with open('temp_profiles.json', 'r', encoding='utf-8') as f:
+        with open(profiles_file, 'r', encoding='utf-8') as f:
             profiles = json.load(f)
             print(f"[DEBUG] Loaded {len(profiles)} profiles from JSON")
-            # Filter out profiles with Unknown emails
-            valid_profiles = [p for p in profiles if p.get('email', 'Unknown') != 'Unknown']
-            print(f"[INFO] Found {len(valid_profiles)} valid profiles with known emails")
+            
+            # Filter out System Profile and Unknown emails
+            valid_profiles = []
+            for p in profiles:
+                email = p.get('email', 'Unknown')
+                name = p.get('name', '')
+                if email != 'Unknown' and name != 'System Profile' and '@gmail.com' in email:
+                    valid_profiles.append(p)
+                    print(f"[VALID] {email} ({p.get('display_name', 'Unknown')})")
+                else:
+                    print(f"[SKIP] {email} - {name} (filtered out)")
+            
+            print(f"[INFO] Found {len(valid_profiles)} valid Gmail profiles")
             return valid_profiles
     except json.JSONDecodeError as e:
         print(f"[ERROR] JSON decode error: {e}")
@@ -92,48 +76,50 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
     try:
         print(f"   [DEBUG] Setting up Chrome for viewer #{viewer_num+1}")
         
-        # Use temp_path if available, otherwise use original path
+        # Extract profile information
         if isinstance(profile_data, dict):
-            profile_path = profile_data.get('temp_path', profile_data.get('path'))
+            profile_path = profile_data.get('path')
             email = profile_data.get('email', 'Unknown')
-            print(f"   [DEBUG] Using profile for: {email}")
+            name = profile_data.get('name', 'Unknown')
+            print(f"   [DEBUG] Using profile: {email} ({name})")
         else:
-            # Backward compatibility - profile_data is just a path string
+            # Backward compatibility
             profile_path = profile_data
+            email = 'Unknown'
             
-        print(f"   [DEBUG] Using profile path: {profile_path}")
+        print(f"   [DEBUG] Profile path: {profile_path}")
         
         options = Options()
         
-        # Handle different profile path structures
-        if "temp_bot_profiles" in profile_path:
-            # For temp profiles, use the full path as user-data-dir
-            print(f"   [DEBUG] Using temporary profile setup")
-            options.add_argument(f'--user-data-dir={profile_path}')
-            
-            # Add unique profile directory to avoid conflicts
-            temp_profile_dir = f"TempProfile_{viewer_num}"
-            options.add_argument(f'--profile-directory={temp_profile_dir}')
-        elif "User Data" in profile_path:
-            # For paths like: C:\Users\...\Chrome\User Data\Profile 1
-            # We want: C:\Users\...\Chrome\User Data
+        # For Windows Chrome User Data structure
+        # Path: C:\Users\...\Chrome\User Data\Default or Profile 1
+        if "User Data" in profile_path:
             user_data_dir = profile_path.split("User Data")[0] + "User Data"
             profile_name = profile_path.split("User Data")[-1].strip("\\/")
-            options.add_argument(f'--user-data-dir={user_data_dir}')
-            options.add_argument(f'--profile-directory={profile_name}')
+            
             print(f"   [DEBUG] User Data Dir: {user_data_dir}")
-            print(f"   [DEBUG] Profile Name: {profile_name}")
+            print(f"   [DEBUG] Profile Directory: {profile_name}")
+            
+            options.add_argument(f'--user-data-dir="{user_data_dir}"')
+            if profile_name and profile_name != "Default":
+                options.add_argument(f'--profile-directory="{profile_name}"')
         else:
-            # For custom profiles, use as is
-            options.add_argument(f'--user-data-dir={profile_path}')
+            # For other profile structures
+            options.add_argument(f'--user-data-dir="{profile_path}"')
         
-        options.add_argument(f'--remote-debugging-port={9222 + viewer_num}')
+        # Unique debugging port for each instance
+        debug_port = 9222 + viewer_num
+        options.add_argument(f'--remote-debugging-port={debug_port}')
+        
+        # Chrome options to preserve login state
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-default-apps')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--no-sandbox')
+        options.add_argument('--disable-web-security')
+        options.add_argument('--allow-running-insecure-content')
         
         # Anti-detection options
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -165,28 +151,28 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         
         if chrome_executable:
             options.binary_location = chrome_executable
+            print(f"   [DEBUG] Using Chrome binary: {chrome_executable}")
         else:
             print(f"   [WARNING] Chrome executable not found, using system default")
         
-        # Create WebDriver with system Chrome (not ChromeDriverManager)
+        # Create WebDriver
         try:
-            # Try to use system chromedriver first
-            service = Service()  # Use system chromedriver
+            service = Service()
             driver = webdriver.Chrome(service=service, options=options)
-        except Exception:
-            # Fallback to ChromeDriverManager if system chromedriver not found
-            print(f"   [DEBUG] System chromedriver not found, downloading...")
+            print(f"   [SUCCESS] Chrome launched for {email}")
+        except Exception as e:
+            print(f"   [DEBUG] System chromedriver failed, trying ChromeDriverManager...")
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
+            print(f"   [SUCCESS] Chrome launched for {email} (via ChromeDriverManager)")
         
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        print(f"   [SUCCESS] Chrome instance created for viewer #{viewer_num+1}")
         return driver
         
     except Exception as e:
-        print(f"   [ERROR] Failed to create Chrome instance: {e}")
+        print(f"   [ERROR] Failed to create Chrome for {email}: {e}")
         print(f"   [ERROR] Error details: {str(e)}")
         return None
 
