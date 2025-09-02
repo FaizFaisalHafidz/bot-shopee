@@ -43,10 +43,10 @@ if not exist "logs" mkdir logs
 
 echo.
 echo Available launch options:
-echo 1. Real URL Bot [RDP OPTIMIZED] - Fixed untuk Windows RDP
+echo 1. Ultra RDP Bot [MAXIMUM OPTIMIZATION] - Ultra-aggressive bypass
 echo 2. Device Fingerprint Bot - Advanced device spoofing  
 echo 3. Auth Bypass Bot - Authentication bypass only
-echo 4. Quick Launch - RDP optimized default settings
+echo 4. Quick Launch - Ultra RDP optimized
 echo.
 
 set /p choice="Select option (1-4): "
@@ -58,7 +58,7 @@ if "%choice%"=="4" goto quick_launch
 goto real_url_bot
 
 :real_url_bot
-echo [LAUNCH] Real URL Bot - RDP Optimized Version
+echo [LAUNCH] Ultra RDP Bot - Maximum Optimization
 echo.
 set /p session_id="Enter Shopee Live Session ID: "
 if "%session_id%"=="" (
@@ -71,14 +71,15 @@ set /p viewer_count="Enter viewer count (default 3): "
 if "%viewer_count%"=="" set viewer_count=3
 
 echo.
-echo Starting RDP-Optimized Real URL Bot...
+echo Starting Ultra RDP Bot with maximum optimization...
 echo Session ID: %session_id%
 echo Viewer Count: %viewer_count%
-echo Mode: RDP Headless Optimized
-echo Expected Boost: %viewer_count% x 300 = %viewer_count%00
+echo Mode: Ultra RDP Headless (GPU Disabled)
+echo Bypass: Ultra-aggressive + Emergency methods
+echo Expected Mega Boost: %viewer_count% x 500 = %viewer_count%500
 echo.
 
-python real_url_bot_rdp.py %session_id% %viewer_count%
+python real_url_bot_ultra.py %session_id% %viewer_count%
 goto end
 
 :device_bot
@@ -126,7 +127,7 @@ python auth_bypass_bot.py %session_id% %viewer_count%
 goto end
 
 :quick_launch
-echo [QUICK] RDP Optimized Quick Launch
+echo [QUICK] Ultra RDP Quick Launch
 echo.
 set /p session_id="Enter Shopee Live Session ID: "
 if "%session_id%"=="" (
@@ -136,11 +137,12 @@ if "%session_id%"=="" (
 )
 
 echo.
-echo Quick launching RDP-optimized Real URL Bot with 3 viewers...
+echo Quick launching Ultra RDP Bot with 3 viewers...
 echo Session ID: %session_id%
+echo Mode: Ultra-aggressive bypass + Mega booster
 echo.
 
-python real_url_bot_rdp.py %session_id% 3
+python real_url_bot_ultra.py %session_id% 3
 goto end
 
 :end

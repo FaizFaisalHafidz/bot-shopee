@@ -1,11 +1,11 @@
 @echo off
-title SHOPEE REAL URL BOT - RDP OPTIMIZED
+title SHOPEE ULTRA RDP BOT - MAXIMUM OPTIMIZATION
 color 0a
 
 echo.
 echo ===============================================================================
-echo    SHOPEE REAL URL BOT - RDP OPTIMIZED VERSION
-echo    Fixed untuk Windows RDP dengan proper Chrome options
+echo    SHOPEE ULTRA RDP BOT - MAXIMUM OPTIMIZATION
+echo    Ultra-aggressive login bypass + GPU disabled + Emergency bypasses
 echo ===============================================================================
 echo.
 
@@ -20,11 +20,12 @@ set /p VIEWER_COUNT="Enter viewer count (default 3): "
 if "%VIEWER_COUNT%"=="" set VIEWER_COUNT=3
 
 echo.
-echo Starting RDP-Optimized Real URL Bot...
+echo Starting ULTRA RDP Bot with maximum optimization...
 echo Session ID: %SESSION_ID%
 echo Viewer Count: %VIEWER_COUNT%
-echo Mode: RDP Headless Optimized
-echo Browser: Chrome Headless (RDP Safe)
+echo Mode: Ultra RDP Headless (GPU Disabled)
+echo Bypass: Ultra-aggressive + Emergency methods
+echo Expected Mega Boost: %VIEWER_COUNT% x 500 = %VIEWER_COUNT%500
 echo.
 
 REM Check if virtual environment exists
@@ -35,8 +36,8 @@ if exist "venv\Scripts\activate.bat" (
     echo [WARNING] Virtual environment not found. Using system Python...
 )
 
-python real_url_bot_rdp.py %SESSION_ID% %VIEWER_COUNT%
+python real_url_bot_ultra.py %SESSION_ID% %VIEWER_COUNT%
 
 echo.
-echo Bot stopped. Press any key to exit.
+echo Ultra bot stopped. Press any key to exit.
 pause >nul
