@@ -173,10 +173,12 @@ def main():
             
             # Try to generate profiles
             import subprocess
-            result = subprocess.run([sys.executable, 'scripts/detect_profiles.py'], 
+            result = subprocess.run([sys.executable, 'scripts/detect_profiles_clean.py'], 
                                   capture_output=True, text=True, cwd='.')
             if result.returncode == 0:
                 print("Profile generation successful!")
+                with open('temp_profiles.json', 'w') as f:
+                    f.write(result.stdout)
                 # Try to read again
                 available_profiles = get_available_profiles()
                 if not available_profiles:
@@ -190,7 +192,14 @@ def main():
         
         print(f"INFO: Ditemukan {len(available_profiles)} profile Chrome:")
         for i, profile in enumerate(available_profiles):
-            print(f"   {i+1}. {profile.get('email', 'Unknown')} - {profile.get('name', 'Unknown')}")
+            email = profile.get('email', 'Unknown')
+            display_name = profile.get('display_name', profile.get('name', 'Unknown'))
+            profile_name = profile.get('name', 'Unknown')
+            
+            if email != 'Unknown' and '@' in email:
+                print(f"   {i+1}. {email} ({display_name}) - {profile_name}")
+            else:
+                print(f"   {i+1}. {display_name} - {profile_name} [NO EMAIL]")
         print()
         
         viewers = []
@@ -201,9 +210,17 @@ def main():
                 profile = available_profiles[i]
                 device_id = generate_device_id()
                 
-                print(f"STARTING: Memulai viewer #{i+1}: {profile['email']}")
+                email = profile.get('email', 'Unknown')
+                display_name = profile.get('display_name', profile.get('name', 'Unknown'))
+                profile_name = profile.get('name', 'Unknown')
+                
+                if email != 'Unknown' and '@' in email:
+                    print(f"STARTING: Memulai viewer #{i+1}: {email} ({display_name})")
+                else:
+                    print(f"STARTING: Memulai viewer #{i+1}: {display_name}")
+                    
                 print(f"   Device ID: {device_id[:8]}...{device_id[-4:]}")
-                print(f"   Profile: {profile['name']}")
+                print(f"   Profile: {profile_name}")
                 
                 # Buat Chrome instance dengan profile
                 print(f"   [DEBUG] Creating Chrome instance with profile: {profile['path']}")

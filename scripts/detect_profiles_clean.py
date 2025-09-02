@@ -50,20 +50,91 @@ def find_chrome_profiles():
                             # Extract profile info
                             profile_name = item.name
                             email = "Unknown"
+                            display_name = "Unknown"
                             
-                            # Try to get email from preferences
-                            if 'profile' in prefs:
-                                if 'user_name' in prefs['profile']:
-                                    email = prefs['profile']['user_name']
-                                elif 'name' in prefs['profile']:
-                                    name = prefs['profile']['name']
-                                    if '@' in name:
-                                        email = name
+                            # Try multiple methods to get email from preferences
+                            # Method 1: Check account_info for Google accounts
+                            if 'account_info' in prefs:
+                                for account_data in prefs['account_info']:
+                                    if 'email' in account_data:
+                                        email = account_data['email']
+                                        if 'full_name' in account_data:
+                                            display_name = account_data['full_name']
+                                        break
+                            
+                            # Method 2: Check profile section
+                            if email == "Unknown" and 'profile' in prefs:
+                                profile_data = prefs['profile']
+                                
+                                # Check various email fields
+                                email_fields = [
+                                    'user_name',
+                                    'gaia_name', 
+                                    'gaia_given_name',
+                                    'name'
+                                ]
+                                
+                                for field in email_fields:
+                                    if field in profile_data and profile_data[field]:
+                                        candidate = profile_data[field]
+                                        if '@' in str(candidate):
+                                            email = candidate
+                                            break
+                                
+                                # Check for display name
+                                name_fields = ['gaia_name', 'name', 'given_name']
+                                for field in name_fields:
+                                    if field in profile_data and profile_data[field]:
+                                        if '@' not in str(profile_data[field]):
+                                            display_name = profile_data[field]
+                                            break
+                            
+                            # Method 3: Check signin section
+                            if email == "Unknown" and 'signin' in prefs:
+                                signin_data = prefs['signin']
+                                if 'allowed_username' in signin_data:
+                                    email = signin_data['allowed_username']
+                            
+                            # Method 4: Check google services
+                            if email == "Unknown" and 'google' in prefs:
+                                google_data = prefs['google']
+                                if 'services' in google_data:
+                                    services = google_data['services']
+                                    if 'signin' in services:
+                                        signin = services['signin']
+                                        if 'username' in signin:
+                                            email = signin['username']
+                            
+                            # If still no email, try to find it in any nested structure
+                            if email == "Unknown":
+                                def find_email_recursive(data, depth=0):
+                                    if depth > 3:  # Prevent infinite recursion
+                                        return None
+                                    if isinstance(data, dict):
+                                        for key, value in data.items():
+                                            if key in ['email', 'username', 'user_name', 'account_id']:
+                                                if isinstance(value, str) and '@' in value:
+                                                    return value
+                                            elif isinstance(value, (dict, list)):
+                                                result = find_email_recursive(value, depth + 1)
+                                                if result:
+                                                    return result
+                                    elif isinstance(data, list):
+                                        for item in data:
+                                            result = find_email_recursive(item, depth + 1)
+                                            if result:
+                                                return result
+                                    return None
+                                
+                                found_email = find_email_recursive(prefs)
+                                if found_email:
+                                    email = found_email
                             
                             profiles.append({
                                 'path': str(item),
                                 'name': profile_name,
                                 'email': email,
+                                'display_name': display_name,
                                 'location': str(base_path.name)
                             })
                             

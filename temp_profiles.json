@@ -2,67 +2,78 @@
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 10",
     "name": "Profile 10",
-    "email": "Unknown",
+    "email": "abdurahmad109@gmail.com",
+    "display_name": "abdurahmad109@gmail.com",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 9",
     "name": "Profile 9",
-    "email": "Unknown",
+    "email": "mamanujang461@gmail.com",
+    "display_name": "mamanujang461@gmail.com",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 8",
     "name": "Profile 8",
     "email": "Unknown",
+    "display_name": "Chrome Anda",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 6",
     "name": "Profile 6",
     "email": "Unknown",
+    "display_name": "Chrome Anda",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 1",
     "name": "Profile 1",
-    "email": "Unknown",
+    "email": "flashcode.dev@gmail.com",
+    "display_name": "Flash Code",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Default",
     "name": "Default",
-    "email": "Unknown",
+    "email": "sendipede093@gmail.com",
+    "display_name": "Faiz Faisal Hafidz",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 4",
     "name": "Profile 4",
-    "email": "Unknown",
+    "email": "nikeftrr7@gmail.com",
+    "display_name": "Nike Fitria",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 3",
     "name": "Profile 3",
-    "email": "Unknown",
+    "email": "neoflashtech@gmail.com",
+    "display_name": "NeoFlash Tech",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/System Profile",
     "name": "System Profile",
     "email": "Unknown",
+    "display_name": "Orang 1",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Profile 2",
     "name": "Profile 2",
-    "email": "Unknown",
+    "email": "21110077@stmik-mi.ac.id",
+    "display_name": "FAIZ FAISAL HAFIDZ",
     "location": "Chrome"
   },
   {
     "path": "/Users/flashcode/Library/Application Support/Google/Chrome/Guest Profile",
     "name": "Guest Profile",
     "email": "Unknown",
+    "display_name": "Tamu",
     "location": "Chrome"
   }
 ]
