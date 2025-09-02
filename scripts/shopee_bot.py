@@ -34,6 +34,16 @@ def generate_device_id():
 def get_available_profiles():
     """Ambil daftar profile Chrome yang sudah dideteksi"""
     try:
+        # Try temp bot profiles first (safer for automation)
+        temp_bot_profiles_path = '../temp_bot_profiles.json'
+        if os.path.exists(temp_bot_profiles_path):
+            print("[INFO] Using temporary bot profiles...")
+            with open(temp_bot_profiles_path, 'r', encoding='utf-8') as f:
+                profiles = json.load(f)
+                print(f"[DEBUG] Loaded {len(profiles)} temporary bot profiles")
+                return profiles
+        
+        # Fallback to regular detected profiles  
         print("[DEBUG] Trying to read temp_profiles.json...")
         if not os.path.exists('temp_profiles.json'):
             print("[ERROR] temp_profiles.json file not found!")
@@ -59,29 +69,92 @@ def get_available_profiles():
         print(f"[ERROR] Error reading profiles: {e}")
         return []
 
-def create_chrome_with_profile(profile_path, device_id, viewer_num):
+def create_chrome_with_profile(profile_data, device_id, viewer_num):
     """Buat Chrome instance dengan profile spesifik dan device ID"""
     try:
         print(f"   [DEBUG] Setting up Chrome for viewer #{viewer_num+1}")
         
+        # Use temp_path if available, otherwise use original path
+        if isinstance(profile_data, dict):
+            profile_path = profile_data.get('temp_path', profile_data.get('path'))
+            email = profile_data.get('email', 'Unknown')
+            print(f"   [DEBUG] Using profile for: {email}")
+        else:
+            # Backward compatibility - profile_data is just a path string
+            profile_path = profile_data
+            
+        print(f"   [DEBUG] Using profile path: {profile_path}")
+        
         options = Options()
-        options.add_argument(f'--user-data-dir={profile_path}')
+        
+        # Handle different profile path structures
+        if "temp_bot_profiles" in profile_path:
+            # For temp profiles, use the full path as user-data-dir
+            options.add_argument(f'--user-data-dir={profile_path}')
+        elif "User Data" in profile_path:
+            # For paths like: C:\Users\...\Chrome\User Data\Profile 1
+            # We want: C:\Users\...\Chrome\User Data
+            user_data_dir = profile_path.split("User Data")[0] + "User Data"
+            profile_name = profile_path.split("User Data")[-1].strip("\\/")
+            options.add_argument(f'--user-data-dir={user_data_dir}')
+            options.add_argument(f'--profile-directory={profile_name}')
+            print(f"   [DEBUG] User Data Dir: {user_data_dir}")
+            print(f"   [DEBUG] Profile Name: {profile_name}")
+        else:
+            # For custom profiles, use as is
+            options.add_argument(f'--user-data-dir={profile_path}')
+        
         options.add_argument(f'--remote-debugging-port={9222 + viewer_num}')
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-default-apps')
-        options.add_argument('--disable-extensions-file-access-check')
-        options.add_argument('--disable-extensions-http-throttling')
-        options.add_argument('--disable-extensions-https-throttling')
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--no-sandbox')
         
         # Anti-detection options
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         options.add_experimental_option("detach", True)
         
-        # Create WebDriver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
+        # Find Chrome executable path
+        chrome_executable = None
+        
+        if os.name == 'nt':  # Windows
+            possible_paths = [
+                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
+            ]
+        else:  # macOS/Linux
+            possible_paths = [
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/usr/bin/google-chrome",
+                "/usr/bin/chromium-browser",
+                "/snap/bin/chromium"
+            ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                chrome_executable = path
+                print(f"   [DEBUG] Found Chrome at: {path}")
+                break
+        
+        if chrome_executable:
+            options.binary_location = chrome_executable
+        else:
+            print(f"   [WARNING] Chrome executable not found, using system default")
+        
+        # Create WebDriver with system Chrome (not ChromeDriverManager)
+        try:
+            # Try to use system chromedriver first
+            service = Service()  # Use system chromedriver
+            driver = webdriver.Chrome(service=service, options=options)
+        except Exception:
+            # Fallback to ChromeDriverManager if system chromedriver not found
+            print(f"   [DEBUG] System chromedriver not found, downloading...")
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
         
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -91,6 +164,7 @@ def create_chrome_with_profile(profile_path, device_id, viewer_num):
         
     except Exception as e:
         print(f"   [ERROR] Failed to create Chrome instance: {e}")
+        print(f"   [ERROR] Error details: {str(e)}")
         return None
 
 def inject_device_fingerprint(driver, device_id):
@@ -224,7 +298,7 @@ def main():
                 
                 # Buat Chrome instance dengan profile
                 print(f"   [DEBUG] Creating Chrome instance with profile: {profile['path']}")
-                driver = create_chrome_with_profile(profile['path'], device_id, i)
+                driver = create_chrome_with_profile(profile, device_id, i)
                 
                 if driver is None:
                     print(f"ERROR: Gagal membuat viewer #{i+1}")
