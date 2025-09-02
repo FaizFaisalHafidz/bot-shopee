@@ -7,8 +7,7 @@
   "permissions": [
     "activeTab",
     "storage",
-    "webRequest",
-    "webRequestBlocking"
+    "scripting"
   ],
   
   "host_permissions": [
@@ -33,5 +32,9 @@
       "resources": ["inject.js"],
       "matches": ["https://live.shopee.co.id/*"]
     }
-  ]
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'unsafe-inline'; object-src 'self';"
+  }
 }
