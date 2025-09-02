@@ -85,36 +85,63 @@ def inject_google_login(driver, profile_email):
 def get_available_profiles():
     """Ambil daftar profile Chrome yang sudah dideteksi"""
     try:
-        # Skip temp profiles untuk sementara, langsung pakai original profiles
-        print("[INFO] Using original Chrome profiles (bypassing temp system)...")
+        # Skip temp profiles - langsung pakai original profiles
+        print("[INFO] Loading Gmail profiles only (filtering out System Profile)...")
         
         # Read temp_profiles.json directly
         profiles_file = '../temp_profiles.json' if os.path.exists('../temp_profiles.json') else 'temp_profiles.json'
         
-        print(f"[DEBUG] Trying to read: {profiles_file}")
+        print(f"[DEBUG] Reading profiles from: {profiles_file}")
         if not os.path.exists(profiles_file):
             print("[ERROR] Profile file not found!")
             print("[DEBUG] Current directory:", os.getcwd())
-            print("[DEBUG] Files in current directory:", [f for f in os.listdir('.') if not f.startswith('.')])
             return []
             
         with open(profiles_file, 'r', encoding='utf-8') as f:
-            profiles = json.load(f)
-            print(f"[DEBUG] Loaded {len(profiles)} profiles from JSON")
+            all_profiles = json.load(f)
+            print(f"[DEBUG] Total profiles loaded: {len(all_profiles)}")
             
-            # Filter out System Profile and Unknown emails
-            valid_profiles = []
-            for p in profiles:
-                email = p.get('email', 'Unknown')
-                name = p.get('name', '')
-                if email != 'Unknown' and name != 'System Profile' and '@gmail.com' in email:
-                    valid_profiles.append(p)
-                    print(f"[VALID] {email} ({p.get('display_name', 'Unknown')})")
+            # STRICT filtering - hanya Gmail accounts yang valid
+            gmail_profiles = []
+            for i, profile in enumerate(all_profiles):
+                email = profile.get('email', '')
+                display_name = profile.get('display_name', '')
+                name = profile.get('name', '')
+                path = profile.get('path', '')
+                
+                print(f"[{i+1}] Checking profile:")
+                print(f"    Name: {name}")
+                print(f"    Email: {email}")
+                print(f"    Display: {display_name}")
+                
+                # STRICT conditions untuk valid Gmail profile - FIXED cross platform
+                is_gmail = email.endswith('@gmail.com')
+                is_not_system = name != 'System Profile' and name != 'Guest Profile'
+                is_not_unknown = email != 'Unknown' and email != ''
+                has_valid_path = len(path.strip()) > 0  # Any valid path
+                
+                if is_gmail and is_not_system and is_not_unknown and has_valid_path:
+                    gmail_profiles.append(profile)
+                    print(f"    Status: ✅ ACCEPTED (Gmail account)")
                 else:
-                    print(f"[SKIP] {email} - {name} (filtered out)")
+                    print(f"    Status: ❌ REJECTED (Gmail:{is_gmail}, NotSystem:{is_not_system}, NotUnknown:{is_not_unknown}, ValidPath:{has_valid_path})")
+                print()
             
-            print(f"[INFO] Found {len(valid_profiles)} valid Gmail profiles")
-            return valid_profiles
+            print(f"[FINAL] Valid Gmail profiles: {len(gmail_profiles)} out of {len(all_profiles)}")
+            
+            if len(gmail_profiles) == 0:
+                print("[ERROR] No valid Gmail profiles found!")
+                print("[INFO] Make sure you have Chrome profiles logged into Gmail accounts")
+                return []
+            
+            return gmail_profiles
+            
+    except Exception as e:
+        print(f"[ERROR] Failed to load profiles: {e}")
+        import traceback
+        print("[DEBUG] Full error traceback:")
+        traceback.print_exc()
+        return []
     except json.JSONDecodeError as e:
         print(f"[ERROR] JSON decode error: {e}")
         return []
@@ -123,46 +150,42 @@ def get_available_profiles():
         return []
 
 def create_chrome_with_profile(profile_data, device_id, viewer_num):
-    """Buat Chrome instance dengan profile spesifik dan device ID"""
+    """Buat Chrome instance dengan profile spesifik dan sign in manual"""
     try:
         print(f"   [DEBUG] Setting up Chrome for viewer #{viewer_num+1}")
         
         # Extract profile information
         if isinstance(profile_data, dict):
-            original_profile_path = profile_data.get('path')
             email = profile_data.get('email', 'Unknown')
-            name = profile_data.get('name', 'Unknown')
-            print(f"   [DEBUG] Using profile: {email} ({name})")
+            display_name = profile_data.get('display_name', 'Unknown')
+            print(f"   [INFO] Target account: {email} ({display_name})")
         else:
-            original_profile_path = profile_data
             email = 'Unknown'
             
-        print(f"   [DEBUG] Original profile: {original_profile_path}")
-        
-        # Create isolated profile directory for this viewer
-        base_dir = os.path.join(os.getcwd(), '..', 'sessions', 'isolated_profiles')
+        # Create fresh isolated profile for this viewer
+        base_dir = os.path.join(os.getcwd(), '..', 'sessions', 'bot_viewers')
         os.makedirs(base_dir, exist_ok=True)
         
-        isolated_profile = os.path.join(base_dir, f"viewer_{viewer_num+1}_{email.replace('@', '_at_').replace('.', '_')}")
+        viewer_profile = os.path.join(base_dir, f"viewer_{viewer_num+1}")
         
-        # Remove existing isolated profile
-        if os.path.exists(isolated_profile):
+        # Clean up existing profile
+        if os.path.exists(viewer_profile):
             import shutil
-            shutil.rmtree(isolated_profile)
+            shutil.rmtree(viewer_profile)
         
-        os.makedirs(isolated_profile, exist_ok=True)
-        print(f"   [DEBUG] Isolated profile: {isolated_profile}")
+        os.makedirs(viewer_profile, exist_ok=True)
+        print(f"   [DEBUG] Fresh profile created: {viewer_profile}")
         
         options = Options()
         
-        # Use isolated profile directory
-        options.add_argument(f'--user-data-dir={isolated_profile}')
+        # Use fresh profile
+        options.add_argument(f'--user-data-dir={viewer_profile}')
         
-        # Unique debugging port for each instance
+        # Debugging port
         debug_port = 9222 + viewer_num
         options.add_argument(f'--remote-debugging-port={debug_port}')
         
-        # Chrome options for clean start
+        # Chrome options
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-default-apps')
@@ -172,17 +195,14 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         options.add_argument('--disable-web-security')
         options.add_argument('--allow-running-insecure-content')
         options.add_argument('--disable-extensions')
-        options.add_argument('--disable-plugins')
-        options.add_argument('--disable-images')  # Faster loading
         
-        # Anti-detection options
+        # Anti-detection
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         options.add_experimental_option("detach", True)
         
-        # Find Chrome executable path
+        # Find Chrome executable
         chrome_executable = None
-        
         if os.name == 'nt':  # Windows
             possible_paths = [
                 r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -192,70 +212,43 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         else:  # macOS/Linux
             possible_paths = [
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                "/usr/bin/google-chrome",
-                "/usr/bin/chromium-browser",
-                "/snap/bin/chromium"
+                "/usr/bin/google-chrome"
             ]
         
         for path in possible_paths:
             if os.path.exists(path):
                 chrome_executable = path
-                print(f"   [DEBUG] Found Chrome at: {path}")
+                print(f"   [DEBUG] Using Chrome: {path}")
                 break
         
         if chrome_executable:
             options.binary_location = chrome_executable
-            print(f"   [DEBUG] Using Chrome binary: {chrome_executable}")
-        else:
-            print(f"   [WARNING] Chrome executable not found, using system default")
         
-        # Create WebDriver
+        # Create driver
         try:
             service = Service()
             driver = webdriver.Chrome(service=service, options=options)
-            print(f"   [SUCCESS] Chrome launched for {email} (isolated profile)")
-        except Exception as e:
-            print(f"   [DEBUG] System chromedriver failed, trying ChromeDriverManager...")
+        except Exception:
             from webdriver_manager.chrome import ChromeDriverManager
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
-            print(f"   [SUCCESS] Chrome launched for {email} (via ChromeDriverManager)")
         
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        # Copy cookies from original profile if available
-        try:
-            print(f"   [INFO] Attempting to copy session data from original profile...")
-            import sqlite3
-            import shutil
-            
-            # Try to copy essential files from original profile
-            essential_files = ['Cookies', 'Login Data', 'Web Data']
-            
-            for file_name in essential_files:
-                original_file = os.path.join(original_profile_path, file_name)
-                isolated_file = os.path.join(isolated_profile, 'Default', file_name)
-                
-                os.makedirs(os.path.join(isolated_profile, 'Default'), exist_ok=True)
-                
-                if os.path.exists(original_file):
-                    try:
-                        shutil.copy2(original_file, isolated_file)
-                        print(f"   [SUCCESS] Copied {file_name}")
-                    except Exception as copy_error:
-                        print(f"   [WARNING] Could not copy {file_name}: {copy_error}")
-                else:
-                    print(f"   [INFO] {file_name} not found in original profile")
-        except Exception as session_error:
-            print(f"   [WARNING] Could not copy session data: {session_error}")
-            print(f"   [INFO] Chrome will start with clean session")
+        print(f"   [SUCCESS] Chrome launched for viewer #{viewer_num+1}")
+        print(f"   [INFO] Profile: Fresh isolated profile")
+        print(f"   [INFO] Target account: {email}")
+        print(f"   [NOTE] This viewer will start without Google login")
+        print(f"   [NOTE] Chrome will show login page if needed")
         
         return driver
         
     except Exception as e:
-        print(f"   [ERROR] Failed to create Chrome for {email}: {e}")
-        print(f"   [ERROR] Error details: {str(e)}")
+        print(f"   [ERROR] Failed to create Chrome: {e}")
+        import traceback
+        print("[DEBUG] Full error:")
+        traceback.print_exc()
         return None
 
 def inject_device_fingerprint(driver, device_id):
@@ -388,16 +381,12 @@ def main():
                 print(f"   Profile: {profile_name}")
                 
                 # Buat Chrome instance dengan profile
-                print(f"   [DEBUG] Creating Chrome instance with profile: {profile['path']}")
+                print(f"   [DEBUG] Creating Chrome instance for viewer #{i+1}")
                 driver = create_chrome_with_profile(profile, device_id, i)
                 
                 if driver is None:
                     print(f"ERROR: Gagal membuat viewer #{i+1}")
                     continue
-                
-                # Try to restore Google session
-                print(f"   [INFO] Attempting to restore login session...")
-                inject_google_login(driver, email)
                 
                 # Inject device fingerprint
                 inject_device_fingerprint(driver, device_id)
