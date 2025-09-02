@@ -10,35 +10,50 @@ echo ===========================================================================
 echo.
 echo Available Bot Options:
 echo.
-echo [1] MONITORED BOT (CLIENT GRADE)   - Real-time monitoring + 100 viewers
-echo [2] API Bot (RECOMMENDED)          - Direct API calls, most reliable  
-echo [3] Ultra RDP Bot                  - Browser automation for RDP
-echo [4] Device Fingerprint Bot         - Advanced device spoofing
-echo [5] Auth Bypass Bot                - Authentication bypass method
-echo [6] Quick Launch (Auto-detect)     - Smart launcher selection
+echo [1] RDP OPTIMIZED BOT (RECOMMENDED) - Fixed permissions + GPU disabled
+echo [2] MONITORED BOT (CLIENT GRADE)   - Real-time monitoring + 100 viewers
+echo [3] API Bot (EXPERIMENTAL)         - Direct API calls, most reliable  
+echo [4] Ultra RDP Bot                  - Browser automation for RDP
+echo [5] Device Fingerprint Bot         - Advanced device spoofing
+echo [6] Auth Bypass Bot                - Authentication bypass method
+echo [7] Quick Launch (Auto-detect)     - Smart launcher selection
 echo.
 echo [0] Exit
 echo.
 echo ===============================================================================
 echo Recommendations:
-echo • For CLIENT REQUESTS (50-100 viewers): Use MONITORED BOT (#1)
-echo • For RELIABLE RESULTS: Use API Bot (#2) 
-echo • For RDP DEPLOYMENT: Use Ultra RDP Bot (#3)
+echo • For RDP DEPLOYMENT: Use RDP OPTIMIZED BOT (#1) - Fixed all RDP issues
+echo • For CLIENT REQUESTS (50-100 viewers): Use MONITORED BOT (#2)
+echo • For EXPERIMENTAL API: Use API Bot (#3) 
 echo ===============================================================================
 echo.
 
-set /p choice="Select option (1-6, 0 to exit): "
+set /p choice="Select option (1-7, 0 to exit): "
 
-if "%choice%"=="1" goto monitored_bot
-if "%choice%"=="2" goto api_bot
-if "%choice%"=="3" goto ultra_rdp
-if "%choice%"=="4" goto device_fingerprint
-if "%choice%"=="5" goto auth_bypass
-if "%choice%"=="6" goto quick_launch
+if "%choice%"=="1" goto rdp_optimized
+if "%choice%"=="2" goto monitored_bot
+if "%choice%"=="3" goto api_bot
+if "%choice%"=="4" goto ultra_rdp
+if "%choice%"=="5" goto device_fingerprint
+if "%choice%"=="6" goto auth_bypass
+if "%choice%"=="7" goto quick_launch
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
 pause
+goto menu
+
+:rdp_optimized
+echo.
+echo ===============================================================================
+echo    LAUNCHING: SHOPEE RDP OPTIMIZED BOT (RECOMMENDED FOR RDP)
+echo    - Fixed ChromeDriver permissions for RDP
+echo    - Complete GPU disabling (no WebGL/3D errors)
+echo    - Network error resilience
+echo    - Simplified monitoring with manual verification
+echo ===============================================================================
+echo.
+call rdp_optimized_launcher.bat
 goto menu
 
 :monitored_bot
