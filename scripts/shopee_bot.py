@@ -215,6 +215,30 @@ def kill_chrome_processes():
         print(f"[WARNING] Could not kill Chrome processes: {e}")
         print("[INFO] Continuing anyway...")
 
+def check_chrome_installation():
+    """Check Chrome installation and return status"""
+    chrome_paths = []
+    
+    if os.name == 'nt':  # Windows
+        possible_paths = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+            r"C:\Users\Administrator\AppData\Local\Google\Chrome\Application\chrome.exe"
+        ]
+    else:  # macOS/Linux
+        possible_paths = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/usr/bin/google-chrome",
+            "/usr/bin/chrome"
+        ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            chrome_paths.append(path)
+    
+    return chrome_paths
+
 def create_chrome_with_profile(profile_data, device_id, viewer_num):
     """Buat Chrome instance dengan existing profile yang sudah login"""
     try:
@@ -285,32 +309,26 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         options.add_experimental_option('useAutomationExtension', False)
         options.add_experimental_option("detach", True)
         
-        # Find Chrome executable (NOT Chromium)
-        chrome_executable = None
-        if os.name == 'nt':  # Windows
-            possible_paths = [
-                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
-            ]
-        else:  # macOS/Linux
-            possible_paths = [
-                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                "/usr/bin/google-chrome",
-                "/usr/bin/chrome"
-            ]
+        # Enhanced Chrome detection
+        chrome_paths = check_chrome_installation()
         
-        for path in possible_paths:
-            if os.path.exists(path):
-                chrome_executable = path
-                print(f"   [DEBUG] Found Chrome executable: {path}")
-                break
-        
-        if chrome_executable:
-            options.binary_location = chrome_executable
-            print(f"   [SUCCESS] Using actual Chrome (not Chromium)")
+        if not chrome_paths:
+            print(f"   [CRITICAL ERROR] No Chrome installation found!")
+            print(f"   [INFO] Available options:")
+            print(f"     1. Install Google Chrome (recommended)")
+            print(f"     2. Use Chromium with auth bypass (experimental)")
+            print(f"   [DECISION] Proceeding with Chromium + auth bypass...")
+            chrome_executable = None
         else:
-            print(f"   [WARNING] Chrome executable not found, may use Chromium")
+            chrome_executable = chrome_paths[0]  # Use first found Chrome
+            options.binary_location = chrome_executable
+            print(f"   [SUCCESS] Using Chrome: {chrome_executable}")
+            
+            # Verify this is actual Chrome, not Chromium
+            if "chromium" in chrome_executable.lower():
+                print(f"   [WARNING] Detected Chromium path, will use auth bypass")
+            else:
+                print(f"   [SUCCESS] Confirmed Google Chrome installation")
         
         # Create driver with most stable approach
         driver = None
@@ -353,10 +371,50 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
                     print(f"   [FINAL ERROR] All methods failed: {str(e3)[:80]}")
                     return None
         
-        # Remove automation indicators
+        # Remove automation indicators and add auth bypass
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        print(f"   [SUCCESS] Chrome opened with existing login: {email}")
+        # Auto-bypass authentication if using fresh profile
+        if not chrome_executable or "chromium" in str(chrome_executable).lower():
+            print(f"   [INFO] Detected Chromium - will attempt auth bypass")
+            try:
+                # Navigate to Google login and attempt bypass
+                driver.get("https://accounts.google.com/signin")
+                time.sleep(2)
+                
+                # Inject auth bypass script
+                bypass_script = """
+                // Auto-fill login form if possible
+                const emailInput = document.querySelector('input[type="email"]');
+                const emailFromProfile = arguments[0];
+                
+                if (emailInput && emailFromProfile) {
+                    emailInput.value = emailFromProfile;
+                    emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    // Try to find and click next button
+                    setTimeout(() => {
+                        const nextBtn = document.querySelector('#identifierNext button');
+                        if (nextBtn) nextBtn.click();
+                    }, 1000);
+                    
+                    console.log('[BYPASS] Email auto-filled:', emailFromProfile);
+                } else {
+                    console.log('[BYPASS] Could not find email input or email data');
+                }
+                """
+                
+                driver.execute_script(bypass_script, email)
+                print(f"   [BYPASS] Auth bypass attempted for: {email}")
+                
+                # Wait a bit for any auto-actions
+                time.sleep(3)
+                
+            except Exception as bypass_error:
+                print(f"   [WARNING] Auth bypass failed: {bypass_error}")
+                print(f"   [INFO] Will continue with manual login if needed")
+        
+        print(f"   [SUCCESS] Chrome opened with profile: {email}")
         return driver
         
     except Exception as e:
