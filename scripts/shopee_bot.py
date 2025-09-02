@@ -232,44 +232,27 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         
         options = Options()
         
-        # Create fresh isolated profile directory
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        sessions_dir = os.path.join(current_dir, "..", "sessions", "bot_viewers")
-        profile_dir = os.path.join(sessions_dir, f"viewer_{viewer_num+1}")
+        # Simplified Chrome options for Windows compatibility
+        # Use temporary directory instead of persistent profile
+        import tempfile
+        temp_dir = tempfile.mkdtemp(prefix=f'chrome_viewer_{viewer_num+1}_')
+        print(f"   [DEBUG] Using temporary profile: {temp_dir}")
         
-        # Clean up existing if present
-        if os.path.exists(profile_dir):
-            import shutil
-            try:
-                shutil.rmtree(profile_dir)
-                print(f"   [DEBUG] Cleaned existing profile directory")
-            except Exception as e:
-                print(f"   [WARNING] Could not clean profile dir: {e}")
+        # Basic Chrome options that work reliably
+        options.add_argument(f'--user-data-dir={temp_dir}')
+        options.add_argument(f'--remote-debugging-port={9222 + viewer_num}')
         
-        # Create fresh directory
-        os.makedirs(profile_dir, exist_ok=True)
-        print(f"   [DEBUG] Fresh profile directory: {profile_dir}")
-        
-        # For Chrome arguments - ensure proper path format
-        if os.name == 'nt':  # Windows
-            user_data_dir = profile_dir.replace('/', '\\')
-        else:
-            user_data_dir = profile_dir
-        
-        options.add_argument(f'--user-data-dir="{user_data_dir}"')
-        print(f"   [DEBUG] Chrome args: --user-data-dir=\"{user_data_dir}\" (Fresh isolated profile)")
-        
-        # Unique debugging port
-        debug_port = 9222 + viewer_num
-        options.add_argument(f'--remote-debugging-port={debug_port}')
-        
-        # Chrome options to preserve existing sessions
+        # Essential options only
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
-        options.add_argument('--disable-default-apps')
         options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--no-sandbox')
+        
+        # Windows specific fixes
+        if os.name == 'nt':
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-software-rasterizer')
         
         # CRITICAL: Don't disable web security - it breaks login sessions
         # options.add_argument('--disable-web-security')  # REMOVED
@@ -306,20 +289,24 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         else:
             print(f"   [WARNING] Chrome executable not found, may use Chromium")
         
-        # Create driver with existing profile
+        # Create driver with simplified approach
         try:
-            service = Service()
+            # Try webdriver-manager first (most compatible)
+            from webdriver_manager.chrome import ChromeDriverManager
+            service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
-            print(f"   [SUCCESS] Chrome launched with existing profile for {email}")
+            print(f"   [SUCCESS] Chrome launched via ChromeDriverManager")
         except Exception as e:
-            print(f"   [DEBUG] System chromedriver failed: {e}")
+            print(f"   [DEBUG] ChromeDriverManager failed: {e}")
             try:
-                from webdriver_manager.chrome import ChromeDriverManager
-                service = Service(ChromeDriverManager().install())
+                # Fallback to system chromedriver
+                service = Service()
                 driver = webdriver.Chrome(service=service, options=options)
-                print(f"   [SUCCESS] Chrome launched via ChromeDriverManager for {email}")
+                print(f"   [SUCCESS] Chrome launched with system driver")
             except Exception as e2:
-                print(f"   [ERROR] Both chromedriver methods failed: {e2}")
+                print(f"   [ERROR] Both driver methods failed:")
+                print(f"         ChromeDriverManager: {e}")
+                print(f"         System driver: {e2}")
                 return None
         
         # Remove automation indicators
