@@ -4,48 +4,48 @@ color 0B
 
 cls
 echo.
-echo     ████████████████████████████████████████
-echo        🤖 SHOPEE LIVE VIEWER BOT 🤖
-echo     ████████████████████████████████████████
+echo     ========================================
+echo            SHOPEE LIVE VIEWER BOT
+echo     ========================================
 echo.
 
 REM Quick Python check
 python --version >nul 2>&1 || (
-    echo ❌ Python not found! 
+    echo X Python not found! 
     echo.
     echo Install Python from:
-    echo • Microsoft Store: Search "Python 3.11"
-    echo • python.org/downloads
+    echo - Microsoft Store: Search "Python 3.11"
+    echo - python.org/downloads
     echo.
     pause
     exit /b 1
 )
 
-echo ✅ Python ready!
+echo [OK] Python ready!
 echo.
 
 REM Get user input
-echo ┌─────────────────────────────────────────┐
-echo │           SETUP CONFIGURATION           │
-echo └─────────────────────────────────────────┘
+echo +---------------------------------------+
+echo ^|           SETUP CONFIGURATION        ^|
+echo +---------------------------------------+
 echo.
 
-set /p SESSION="🎥 Shopee session ID: "
+set /p SESSION="[INPUT] Shopee session ID: "
 if "%SESSION%"=="" set SESSION=157658364
 
-set /p VIEWERS="👥 Number of viewers (1-10): "
+set /p VIEWERS="[INPUT] Number of viewers (1-10): "
 if "%VIEWERS%"=="" set VIEWERS=3
 
-set /p WAIT="⏱️ Delay between viewers (seconds): "
+set /p WAIT="[INPUT] Delay between viewers (seconds): "
 if "%WAIT%"=="" set WAIT=2
 
 echo.
-echo ┌─────────────────────────────────────────┐
-echo │            STARTING BOT...              │
-echo └─────────────────────────────────────────┘
+echo +---------------------------------------+
+echo ^|            STARTING BOT...           ^|
+echo +---------------------------------------+
 echo.
-echo 🎯 Target: %VIEWERS% viewers for session %SESSION%
-echo 📺 URL: https://live.shopee.co.id/share?from=live^&session=%SESSION%^&in=1
+echo [TARGET] %VIEWERS% viewers for session %SESSION%
+echo [URL] https://live.shopee.co.id/share?from=live^&session=%SESSION%^&in=1
 echo.
 
 REM Install dependencies quietly
