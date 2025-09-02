@@ -4,6 +4,7 @@ import time
 import random
 import string
 import json
+import platform
 from pathlib import Path
 
 # Fix Windows encoding
@@ -26,6 +27,45 @@ except ImportError as e:
     print("Please install required packages: pip install selenium webdriver-manager")
     input("Press any key to exit...")
     sys.exit(1)
+
+def convert_profile_path_for_os(original_path, profile_name):
+    """
+    Convert profile path based on current OS
+    macOS: /Users/username/Library/Application Support/Google/Chrome/Profile X
+    Windows: C:\Users\username\AppData\Local\Google\Chrome\User Data\Profile X
+    """
+    current_os = platform.system().lower()
+    print(f"   [DEBUG] Current OS: {current_os}")
+    print(f"   [DEBUG] Original profile path: {original_path}")
+    print(f"   [DEBUG] Profile name: {profile_name}")
+    
+    if current_os == "windows":
+        # Always use Windows format for Windows
+        username = os.environ.get('USERNAME', 'Administrator')
+        user_data_dir = f"C:\\Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data"
+        
+        if profile_name.lower() == 'default':
+            print(f"   [DEBUG] Using Default profile on Windows: {user_data_dir}")
+            return user_data_dir, None  # No profile directory needed for Default
+        else:
+            print(f"   [DEBUG] Using Windows profile: {user_data_dir} + {profile_name}")
+            return user_data_dir, profile_name
+            
+    elif current_os == "darwin":  # macOS
+        # Always use macOS format for macOS
+        username = os.environ.get('USER', 'flashcode')
+        user_data_dir = f"/Users/{username}/Library/Application Support/Google/Chrome"
+        
+        if profile_name.lower() == 'default':
+            print(f"   [DEBUG] Using Default profile on macOS: {user_data_dir}")
+            return user_data_dir, None
+        else:
+            print(f"   [DEBUG] Using macOS profile: {user_data_dir}/{profile_name}")
+            return user_data_dir, profile_name
+    
+    # Fallback
+    print(f"   [WARNING] Unknown OS, using original path")
+    return original_path, profile_name
 
 def generate_device_id():
     """Generate unique 32-character device ID"""
@@ -194,62 +234,16 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         
         options = Options()
         
-        # IMPORTANT: Use existing Chrome profile directly
+        # IMPORTANT: Use existing Chrome profile directly with OS-specific path conversion
         # This preserves login sessions
-        if os.name == 'nt':  # Windows
-            # Convert macOS path to Windows path if needed
-            if original_profile_path.startswith('/Users/'):
-                # This is a macOS path, need to convert to Windows
-                print(f"   [DEBUG] Converting macOS path to Windows path")
-                profile_name = name
-                if profile_name.lower() == 'default':
-                    user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
-                    options.add_argument(f'--user-data-dir="{user_data_dir}"')
-                else:
-                    user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
-                    options.add_argument(f'--user-data-dir="{user_data_dir}"')
-                    options.add_argument(f'--profile-directory="{profile_name}"')
-                
-                print(f"   [DEBUG] Windows User Data: {user_data_dir}")
-                print(f"   [DEBUG] Profile Directory: {profile_name}")
-            elif "User Data" in original_profile_path:
-                # Already Windows path
-                user_data_dir = original_profile_path.split("User Data")[0] + "User Data"
-                profile_name = original_profile_path.split("User Data")[-1].strip("\\/")
-                
-                print(f"   [DEBUG] Windows Chrome User Data: {user_data_dir}")
-                print(f"   [DEBUG] Profile Directory: {profile_name}")
-                
-                options.add_argument(f'--user-data-dir="{user_data_dir}"')
-                if profile_name and profile_name.lower() != "default":
-                    options.add_argument(f'--profile-directory="{profile_name}"')
-            else:
-                print(f"   [WARNING] Unexpected Windows profile path: {original_profile_path}")
-                # Fallback: construct Windows path from profile name
-                profile_name = name
-                user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
-                options.add_argument(f'--user-data-dir="{user_data_dir}"')
-                if profile_name.lower() != "default":
-                    options.add_argument(f'--profile-directory="{profile_name}"')
-        else:  # macOS/Linux  
-            # For macOS: /Users/.../Google/Chrome/Profile 1
-            if "Chrome" in original_profile_path:
-                # Extract User Data equivalent directory
-                parts = original_profile_path.split("Chrome")
-                if len(parts) >= 2:
-                    user_data_dir = parts[0] + "Chrome"
-                    profile_name = parts[1].strip("/")
-                    
-                    print(f"   [DEBUG] macOS Chrome Data: {user_data_dir}")
-                    print(f"   [DEBUG] Profile Directory: {profile_name}")
-                    
-                    options.add_argument(f'--user-data-dir="{user_data_dir}"')
-                    if profile_name and profile_name.lower() != "default":
-                        options.add_argument(f'--profile-directory="{profile_name}"')
-                else:
-                    options.add_argument(f'--user-data-dir="{original_profile_path}"')
-            else:
-                options.add_argument(f'--user-data-dir="{original_profile_path}"')
+        user_data_dir, profile_directory = convert_profile_path_for_os(original_profile_path, name)
+        
+        options.add_argument(f'--user-data-dir="{user_data_dir}"')
+        if profile_directory:
+            options.add_argument(f'--profile-directory="{profile_directory}"')
+            print(f"   [DEBUG] Chrome args: --user-data-dir=\"{user_data_dir}\" --profile-directory=\"{profile_directory}\"")
+        else:
+            print(f"   [DEBUG] Chrome args: --user-data-dir=\"{user_data_dir}\" (Default profile)")
         
         # Unique debugging port
         debug_port = 9222 + viewer_num
