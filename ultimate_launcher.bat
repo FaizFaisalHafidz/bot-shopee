@@ -43,10 +43,10 @@ if not exist "logs" mkdir logs
 
 echo.
 echo Available launch options:
-echo 1. Real URL Bot [RECOMMENDED] - Exact Shopee Live URL structure
+echo 1. Real URL Bot [RDP OPTIMIZED] - Fixed untuk Windows RDP
 echo 2. Device Fingerprint Bot - Advanced device spoofing  
 echo 3. Auth Bypass Bot - Authentication bypass only
-echo 4. Quick Launch - Default settings
+echo 4. Quick Launch - RDP optimized default settings
 echo.
 
 set /p choice="Select option (1-4): "
@@ -58,7 +58,7 @@ if "%choice%"=="4" goto quick_launch
 goto real_url_bot
 
 :real_url_bot
-echo [LAUNCH] Real URL Bot - Exact Shopee Live URL structure
+echo [LAUNCH] Real URL Bot - RDP Optimized Version
 echo.
 set /p session_id="Enter Shopee Live Session ID: "
 if "%session_id%"=="" (
@@ -71,14 +71,14 @@ set /p viewer_count="Enter viewer count (default 3): "
 if "%viewer_count%"=="" set viewer_count=3
 
 echo.
-echo Starting Real URL Bot with exact Shopee Live structure...
+echo Starting RDP-Optimized Real URL Bot...
 echo Session ID: %session_id%
 echo Viewer Count: %viewer_count%
-echo URL Structure: EXACT Shopee Live format
+echo Mode: RDP Headless Optimized
 echo Expected Boost: %viewer_count% x 300 = %viewer_count%00
 echo.
 
-python real_url_bot.py %session_id% %viewer_count%
+python real_url_bot_rdp.py %session_id% %viewer_count%
 goto end
 
 :device_bot
@@ -126,7 +126,7 @@ python auth_bypass_bot.py %session_id% %viewer_count%
 goto end
 
 :quick_launch
-echo [QUICK] Quick Launch with default settings
+echo [QUICK] RDP Optimized Quick Launch
 echo.
 set /p session_id="Enter Shopee Live Session ID: "
 if "%session_id%"=="" (
@@ -136,11 +136,11 @@ if "%session_id%"=="" (
 )
 
 echo.
-echo Quick launching Real URL Bot with 3 viewers...
+echo Quick launching RDP-optimized Real URL Bot with 3 viewers...
 echo Session ID: %session_id%
 echo.
 
-python real_url_bot.py %session_id% 3
+python real_url_bot_rdp.py %session_id% 3
 goto end
 
 :end

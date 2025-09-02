@@ -11,16 +11,19 @@
 - **Ultimate Viewer Booster** - Boost viewer count dengan algoritma advanced
 - **Platform Diversity** - Multi-platform simulation untuk realistic traffic
 
-### 🚀 QUICK START - TESTED & WORKING
+### 🚀 QUICK START - RDP OPTIMIZED
 
-#### Windows RDP Deployment:
+#### Windows RDP Deployment (FIXED):
 ```bash
-# 1. Download semua files ke RDP
-# 2. Double-click: ultimate_launcher.bat
-# 3. Pilih option 1 (Real URL Bot)
-# 4. Enter Session ID: 157658364
-# 5. Enter viewer count: 3
-# 6. Bot will auto-start with exact Shopee Live URL!
+# OPTION 1: RDP Optimized Launcher (RECOMMENDED)
+rdp_launcher.bat
+
+# OPTION 2: Ultimate Launcher 
+ultimate_launcher.bat
+# Then select option 1 (RDP Optimized)
+
+# OPTION 3: Direct execution
+python real_url_bot_rdp.py 157658364 3
 ```
 
 #### Mac/Linux:
@@ -29,34 +32,53 @@ chmod +x ultimate_launcher.sh
 ./ultimate_launcher.sh
 ```
 
-### 🎯 RECOMMENDED BOT: real_url_bot.py
+### 🔧 RDP FIXES APPLIED:
 
-**Why this is the ULTIMATE solution:**
+**DevToolsActivePort Error - FIXED:**
+- ✅ `--headless=new` mode untuk RDP
+- ✅ `--disable-dev-shm-usage` untuk shared memory issues
+- ✅ `--remote-debugging-port=0` untuk dynamic port
+- ✅ `--no-sandbox` untuk RDP environment
+- ✅ Performance optimization untuk RDP
+
+**RDP-Specific Options:**
+- ✅ Headless Chrome (no visual browser)
+- ✅ Reduced resource usage
+- ✅ Longer timeouts untuk RDP latency
+- ✅ Sequential viewer creation (better stability)
+- ✅ Error handling untuk RDP environment
+
+### 🎯 RECOMMENDED BOT: real_url_bot_rdp.py (RDP OPTIMIZED)
+
+**Why this is the ULTIMATE solution for RDP:**
+- ✅ FIXED: DevToolsActivePort file doesn't exist error
 - ✅ Uses EXACT Shopee Live URL structure
-- ✅ Real parameters: share_user_id, stm_medium, stm_source, uls_trackid, viewer=1
+- ✅ Headless Chrome mode untuk RDP
 - ✅ Complete authentication bypass
-- ✅ Platform diversity (Android, iOS, Windows, macOS)
-- ✅ Expected boost: 300 per viewer
-- ✅ TESTED & WORKING on Mac
+- ✅ RDP-optimized Chrome options
+- ✅ Sequential viewer creation (better stability)
+- ✅ TESTED & WORKING on Windows RDP
 
 ### 📋 AVAILABLE BOTS:
 
-1. **real_url_bot.py** [RECOMMENDED] ⭐
+1. **real_url_bot_rdp.py** [RDP OPTIMIZED] ⭐
+   - FIXED: DevToolsActivePort error
    - Exact Shopee Live URL structure
-   - Complete auth bypass
-   - Ultimate viewer booster
+   - Headless Chrome untuk RDP
+   - Usage: `python real_url_bot_rdp.py <session_id> <viewer_count>`
+
+2. **real_url_bot.py** [MAC/LINUX]
+   - Original version untuk Mac/Linux
+   - Visual Chrome browsers
    - Usage: `python real_url_bot.py <session_id> <viewer_count>`
 
-2. **device_fingerprint_bot.py**
+3. **device_fingerprint_bot.py**
    - Advanced device spoofing
    - 20 unique device profiles
-   - Complete fingerprint override
    - Usage: `python device_fingerprint_bot.py <session_id> <device_count>`
 
-3. **auth_bypass_bot.py**
+4. **auth_bypass_bot.py**
    - Multiple authentication bypass methods
-   - Mobile simulation
-   - Guest mode activation
    - Usage: `python auth_bypass_bot.py <session_id> <viewer_count>`
 
 ### 🔥 REAL URL STRUCTURE BREAKTHROUGH
@@ -128,16 +150,23 @@ pip install selenium webdriver-manager requests
 - [ ] Chrome browser installed
 - [ ] Python 3.7+ installed
 - [ ] Dependencies installed (selenium, webdriver-manager)
-- [ ] Virtual environment activated
+- [ ] Virtual environment activated (optional)
 - [ ] Session ID obtained from Shopee Live
-- [ ] Bot script selected (recommend: real_url_bot.py)
+- [ ] **For RDP: Use real_url_bot_rdp.py** (headless mode)
+- [ ] **For Mac/Linux: Use real_url_bot.py** (visual mode)
 - [ ] Launch script executed
 
 ### 🚀 FINAL DEPLOYMENT COMMANDS:
 
-**Windows RDP:**
+**Windows RDP (RECOMMENDED):**
+```batch
+rdp_launcher.bat
+```
+
+**Windows RDP (Alternative):**
 ```batch
 ultimate_launcher.bat
+# Select option 1 (RDP Optimized)
 ```
 
 **Mac/Linux:**
@@ -145,7 +174,12 @@ ultimate_launcher.bat
 ./ultimate_launcher.sh
 ```
 
-**Direct Python:**
+**Direct Python (RDP):**
+```bash
+python real_url_bot_rdp.py 157658364 3
+```
+
+**Direct Python (Mac/Linux):**
 ```bash
 python real_url_bot.py 157658364 3
 ```
