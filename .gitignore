@@ -1,30 +1,296 @@
-# Virtual Environment
+# SHOPEE BOT - COMPREHENSIVE GIT IGNORE
+# Exclude large files, logs, sessions, and temporary data
+
+# ==============================================================================
+# PYTHON & VIRTUAL ENVIRONMENT
+# ==============================================================================
+# Virtual environments
 venv/
 env/
+ENV/
 .venv/
-
-# Python
+.env/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
 *.so
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
 
-# Logs
-*.log
+# Python distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==============================================================================
+# CHROME BROWSER DATA & SESSIONS (VERY LARGE FILES)
+# ==============================================================================
+# Chrome profiles and user data - These are MASSIVE directories
+sessions/
+chrome_profiles/
+manual_login/
+manual_test/
+test_profile/
+test_profiles/
+verified_account/
+viewer_*/
+device_profiles/
+google_profiles/
+interceptor_sessions/
+bypass_viewers/
+bot_viewers/
+direct_profiles/
+real_url_viewers/
+simple_viewers/
+multi_profiles/
+viewer_sessions/
+account_test/
+
+# Chrome debug and cache files
+ChromeFeatureState
+DevToolsActivePort
+First Run
+first_party_sets.db*
+Last Version
+Local State
+Variations
+chrome_debug.log
+
+# Chrome directories (extremely large)
+AmountExtractionHeuristicRegexes/
+AutofillStates/
+CertificateRevocation/
+component_crx_cache/
+CookieReadinessList/
+Crowd Deny/
+Default/
+CertificateTransparency/
+DownloadService/
+FileTypePolicies/
+GCM Store/
+GraphiteDawnCache/
+HostResolver/
+Local Extension Settings/
+Network Action Predictor/
+Network Persistent State/
+OptimizationHints/
+Platform Notifications/
+Safe Browsing/
+Segmentation Platform/
+Site Characteristics Database/
+Sync Data/
+Top Sites/
+VideoDecodeStatsDB/
+WebStorage/
+
+# ==============================================================================
+# LOG FILES & OUTPUT
+# ==============================================================================
 logs/
+*.log
+bot.log
+api_bot.log
+chrome_google_bot.log
+hybrid_bot.log
+multi_account_bot.log
+google_setup_*.json
+debug.log
+error.log
+access.log
 
-# OS
-.DS_Store
+# ==============================================================================
+# TEMPORARY & CACHE FILES
+# ==============================================================================
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+temp_profiles.json
+
+# Cache files
+.cache/
+cache/
+*.cache
+
+# ==============================================================================
+# SENSITIVE DATA & CREDENTIALS
+# ==============================================================================
+# Account files (sensitive data)
+accounts/
+google_accounts*.csv
+shopee_accounts.csv
+account_*.csv
+#input.csv
+
+# Configuration with sensitive data
+config_local.json
+auth_config.json
+credentials.json
+secrets.json
+.env
+.env.local
+.env.production
+
+# API keys and tokens
+api_keys.txt
+tokens.txt
+*.key
+*.pem
+*.p12
+
+# ==============================================================================
+# OPERATING SYSTEM FILES
+# ==============================================================================
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# IDE
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.nfs*
+
+# ==============================================================================
+# DEVELOPMENT & IDE
+# ==============================================================================
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# Sensitive data
-input.csv
-config_local.json
+# ==============================================================================
+# SELENIUM & WEBDRIVER
+# ==============================================================================
+# WebDriver executables
+chromedriver*
+geckodriver*
+operadriver*
+edgedriver*
+IEDriverServer*
+
+# ==============================================================================
+# NODE.JS (for Chrome extension)
+# ==============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ==============================================================================
+# OUTPUT & GENERATED FILES
+# ==============================================================================
+# Screenshots
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Videos
+videos/
+*.mp4
+*.avi
+*.mov
+
+# Data exports
+exports/
+output/
+results/
+
+# ==============================================================================
+# ARCHIVES & BACKUPS
+# ==============================================================================
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+*.xz
+backup/
+backups/
+*.backup
+*.bak
+
+# ==============================================================================
+# RUNTIME & PROCESS FILES
+# ==============================================================================
+*.pid
+*.sock
+*.lock
+
+# ==============================================================================
+# KEEP IMPORTANT FILES (negative patterns)
+# ==============================================================================
+# Keep these important files even if they match patterns above
+!requirements.txt
+!package.json
+!README.md
+!DEPLOYMENT_GUIDE.md
+!INSTALL_NODEJS.md
+!.gitignore
+
+# Keep core bot files
+!*_bot.py
+!*_launcher.bat
+!*_launcher.sh
+!generatex_4c.js
+
+# Keep chrome extension source
+!chrome_extension/background.js
+!chrome_extension/content.js
+!chrome_extension/inject.js
+!chrome_extension/manifest.json
+!chrome_extension/README.md
+
+# Keep essential config templates
+!config/bot_config.json
+!config/auth_bypass.json
+!scripts/config.json
+
+# Keep main scripts
+!scripts/shopee_bot.py
+!scripts/detect_profiles.py
+!scripts/detect_profiles_clean.py
+!scripts/network_manipulation_bot.py
+!scripts/session_hijack_bot.py
+!scripts/README.md

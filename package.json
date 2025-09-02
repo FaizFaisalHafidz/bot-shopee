@@ -1,0 +1,24 @@
+{
+  "name": "shopee-viewer-bot",
+  "version": "4.0.0",
+  "description": "Shopee Live Viewer Bot with Session Cookie Authentication",
+  "main": "generatex_4c.js",
+  "scripts": {
+    "start": "node generatex_4c.js",
+    "test": "node generatex_4c.js 157658364 3"
+  },
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "puppeteer": "^21.11.0"
+  },
+  "keywords": [
+    "shopee",
+    "bot",
+    "viewer",
+    "automation",
+    "cookies"
+  ],
+  "author": "FlashBot",
+  "license": "MIT"
+}
