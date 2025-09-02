@@ -1,0 +1,37 @@
+{
+  "bot_settings": {
+    "max_concurrent_viewers": 100,
+    "window_grid": "10x10",
+    "window_size": {
+      "width": 200,
+      "height": 150
+    },
+    "delays": {
+      "between_logins": 3,
+      "page_load": 5,
+      "retry_delay": 10
+    },
+    "chrome_options": {
+      "headless": false,
+      "disable_images": true,
+      "disable_css": false,
+      "user_data_dir": "sessions/"
+    }
+  },
+  "target_session": {
+    "session_id": "",
+    "url": "",
+    "auto_hunt": true
+  },
+  "account_management": {
+    "csv_file": "accounts/shopee_accounts.csv",
+    "rotate_accounts": true,
+    "save_cookies": true,
+    "auto_refresh": true
+  },
+  "monitoring": {
+    "log_level": "INFO",
+    "save_screenshots": false,
+    "health_check_interval": 30
+  }
+}

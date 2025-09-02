@@ -1,0 +1,6 @@
+{
+  "auth_method": "cookie_injection",
+  "cookies_file": "successful_login_cookies.json",
+  "bypass_login": true,
+  "account_phone": "+6283185597189"
+}

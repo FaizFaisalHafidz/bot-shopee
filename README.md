@@ -1,131 +1,281 @@
-# Shopee Live Streaming Bot
+# Shopee Live Multi-Account Bot v3.0
 
-Bot otomatis untuk meningkatkan engagement pada live streaming Shopee dengan fitur:
-- ✅ Bot Like - Menambah like otomatis
-- ✅ Bot Viewer - Menambah viewer otomatis  
-- ✅ Bot ATC (Add to Cart) - Menambah produk ke keranjang otomatis
+🚀 **Advanced multi-account system untuk scaling hingga 100+ viewers dengan auto-login**
 
-## 🚀 Fitur Utama
+Bot terbaru dengan sistem manajemen akun otomatis, login paralel, dan scaling yang powerful untuk kebutuhan komersial.
 
-1. **Bot Like**: Memberikan like secara otomatis dengan interval random
-2. **Bot Viewer**: Menambah viewer dengan join live stream
-3. **Bot ATC**: Menambahkan produk live ke keranjang secara otomatis
-4. **Multi-threading**: Performa optimal dengan multiple thread
-5. **Real-time Monitoring**: Log aktivitas secara real-time
+## ✨ New Features v3.0
 
-## 📋 Persyaratan
+- 👥 **Multi-Account Management** - CSV-based account database
+- 🔑 **Auto-Login System** - Otomatis login semua akun
+- 📊 **Scalability** - Support hingga 100+ viewers concurrent
+- 🎯 **Session Management** - Auto-hunt active sessions
+- 📈 **Statistics & Monitoring** - Real-time performance tracking
+- 🛡️ **Account Protection** - Session persistence & cookie management
 
-- Python 3.7 atau lebih baru
-- File `input.csv` berisi cookie akun Shopee (sudah tersedia)
-- Koneksi internet yang stabil
+## 📁 Project Structure
 
-## 🛠️ Instalasi
-
-### Untuk macOS (Recommended):
-
-1. Clone atau download repository ini
-2. Jalankan setup otomatis:
-```bash
-./setup_macos.sh
+```
+bot-live-shopee/
+├── 👥 multi_account_bot.py    # Main bot dengan multi-account support
+├── ⚙️  bot_manager.sh          # Management dashboard
+├── accounts/
+│   └── shopee_accounts.csv    # Database akun (phone, password, status)
+├── config/
+│   └── bot_config.json        # Bot configuration
+├── sessions/
+│   └── viewer_*/              # Session data untuk setiap viewer
+├── logs/
+│   └── bot.log                # Activity logs
+└── requirements.txt           # Python dependencies
 ```
 
-### Manual Installation:
+## 🚀 Quick Start
 
-1. Buat virtual environment:
+### 1. Setup Environment
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-2. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Make bot manager executable
+chmod +x bot_manager.sh
 ```
 
-## 📝 Cara Penggunaan
-
-### Metode 1: Script Otomatis (Recommended untuk macOS)
-
-1. Pastikan file `input.csv` sudah berisi cookie akun Shopee
-2. Jalankan bot standar:
+### 2. Add Accounts
 ```bash
-./run.sh
+# Run bot manager
+./bot_manager.sh
+
+# Pilih option 2 (Account Manager)
+# Add accounts manual atau edit CSV file
 ```
 
-3. Atau jalankan bot advanced:
+### 3. Run Multi-Account Bot
 ```bash
-./run_advanced.sh
+# Option 1 di bot manager
+# Bot akan auto-login semua akun dan scale ke target viewers
 ```
 
-### Metode 2: Manual
+## 📊 Account Management
 
-1. Aktifkan virtual environment:
+### CSV Format (accounts/shopee_accounts.csv)
+```csv
+phone,password,status,cookies,last_login,notes
++6283185597189,@Sendi1x#,active,,2025-09-02,Test account 1
++6281234567890,password123,active,,2025-09-02,Account 2
++6287654321098,mypass456,inactive,,2025-09-01,Backup account
+```
+
+### Account Status
+- **active** - Siap digunakan untuk bot
+- **inactive** - Tidak akan digunakan
+- **banned** - Akun di-suspend Shopee
+- **error** - Error saat login terakhir
+
+## 🎯 Bot Configuration
+
+### config/bot_config.json
+```json
+{
+  "bot_settings": {
+    "max_concurrent_viewers": 100,
+    "window_grid": "10x10",
+    "delays": {
+      "between_logins": 3,
+      "page_load": 5
+    },
+    "chrome_options": {
+      "disable_images": true,
+      "user_data_dir": "sessions/"
+    }
+  },
+  "target_session": {
+    "auto_hunt": true
+  },
+  "account_management": {
+    "rotate_accounts": true,
+    "save_cookies": true
+  }
+}
+```
+
+## 🔥 Advanced Features
+
+### 1. Auto-Login System
+- Otomatis login ke semua akun aktif
+- Session persistence dengan cookies
+- Error handling dan retry mechanism
+
+### 2. Smart Scaling
+- Automatic account rotation
+- Grid window positioning (10x10 layout)
+- Resource optimization
+
+### 3. Session Management
+- Auto-hunt active live sessions
+- Session validation sebelum deployment
+- Multiple session support
+
+### 4. Monitoring & Statistics
+- Real-time viewer count tracking
+- Login success rate monitoring
+- Performance metrics dan logging
+
+## 💪 Scaling Guide
+
+### For 100+ Viewers:
+1. **Prepare Accounts**: 100+ active Shopee accounts
+2. **System Requirements**: 
+   - 8GB+ RAM
+   - Multi-core processor
+   - SSD storage recommended
+   - Stable internet (100+ Mbps)
+3. **RDP Setup**: Windows RDP optimal untuk scaling
+4. **Account Distribution**: 1 account = 1 viewer (typical)
+
+### Account Preparation Strategy:
 ```bash
-source venv/bin/activate
+# 1. Register accounts dengan phone numbers berbeda
+# 2. Verify semua accounts
+# 3. Add ke CSV file
+# 4. Test login dengan Account Manager
+# 5. Deploy dengan Multi-Account Bot
 ```
 
-2. Jalankan bot:
+## 🛠️ Bot Manager Commands
+
+| Option | Function | Description |
+|--------|----------|-------------|
+| 1 | Multi-Account Bot | Main bot dengan auto-login |
+| 2 | Account Manager | Add/edit/test accounts |
+| 3 | Session Hunter | Find active live sessions |
+| 4 | Bot Configuration | Edit settings |
+| 5 | View Statistics | Performance metrics |
+| 6 | Stop All Bots | Emergency stop |
+| 7 | Clean Sessions | Clear session data |
+| 8 | Help & Guide | Documentation |
+
+## 📈 Performance Optimization
+
+### System Optimization:
+- Use SSD storage untuk session data
+- Monitor RAM usage (target: <80%)
+- Disable unnecessary Chrome features
+- Use image/CSS blocking untuk performance
+
+### Account Optimization:
+- Distribute accounts across different IPs (advanced)
+- Use fresh accounts untuk best success rate
+- Regular account health monitoring
+- Rotate accounts untuk avoid detection
+
+## 🔧 Troubleshooting
+
+### Common Issues:
+
+**🚫 Login Failed**
 ```bash
-python main.py
-# atau untuk advanced version
-python advanced_bot.py
+# Check account credentials di CSV
+# Verify account status (not banned)
+# Test manual login di browser
+# Check for 2FA/captcha requirements
 ```
 
-3. Pilih menu yang diinginkan:
-   - Ketik `1` untuk Bot Like
-   - Ketik `2` untuk Bot Viewer  
-   - Ketik `3` untuk Bot ATC
-   - Ketik `4` untuk Keluar
-
-4. Masukkan Session Live ID dari Shopee live stream
-5. Bot akan mulai bekerja secara otomatis
-
-## 📊 Format Session Live ID
-
-Session Live ID bisa didapat dari URL live streaming Shopee:
-- URL: `https://live.shopee.co.id/12345678`
-- Session ID: `12345678`
-
-## 🔧 Konfigurasi
-
-### File input.csv
-File ini berisi cookie akun Shopee dalam format semicolon-separated:
-```
-cookie1; cookie2; cookie3
+**🚫 Chrome Crashes**
+```bash
+# Reduce concurrent viewers
+# Clean session data (option 7)
+# Check system resources
+# Update Chrome browser
 ```
 
-Setiap baris adalah satu akun dengan cookie lengkapnya.
+**🚫 Session Not Found**
+```bash
+# Use Session Hunter (option 3)
+# Check live stream masih aktif
+# Try different session IDs
+# Hunt at peak hours (19:00-23:00 WIB)
+```
 
-### Interval dan Timing
-- Bot Like: 2-8 detik interval
-- Bot Viewer: 5-15 detik interval  
-- Bot ATC: 3-10 detik interval
+**🚫 Low Success Rate**
+```bash
+# Verify account quality
+# Check internet stability
+# Reduce concurrent logins
+# Clean old session data
+```
 
-## ⚠️ Peringatan
+## 📊 Success Metrics
 
-- Gunakan bot ini dengan bijak dan sesuai Terms of Service Shopee
-- Tidak disarankan untuk penggunaan komersial tanpa izin
-- Author tidak bertanggung jawab atas penyalahgunaan bot ini
+### Target Performance:
+- **Login Success Rate**: >90%
+- **Live Connection Rate**: >85%
+- **Session Stability**: >95% uptime
+- **Resource Usage**: <80% RAM, <70% CPU
 
-## 🐛 Troubleshooting
+### Monitoring KPIs:
+- Active viewers count
+- Account health status
+- Session duration
+- Error rate tracking
 
-### Bot tidak bisa connect
-- Pastikan session ID valid dan live stream masih aktif
-- Cek koneksi internet
-- Pastikan cookie akun masih valid
+## 🚨 Important Notes
 
-### Error parsing CSV
-- Pastikan format CSV sesuai (semicolon separated)
-- Cek encoding file (UTF-8)
-- Pastikan tidak ada baris kosong
+### Account Management:
+- **Never share accounts** between different operators
+- **Use unique phone numbers** untuk setiap account
+- **Regular password updates** recommended
+- **Monitor for Shopee policy changes**
 
-### Rate limiting
-- Bot sudah dilengkapi dengan interval random
-- Jika masih terkena rate limit, kurangi jumlah akun atau perbesar interval
+### Legal & Ethical:
+- Bot untuk educational/testing purposes
+- Follow Shopee Terms of Service
+- Respect platform rate limits
+- Use responsibly dan ethically
 
-## 📞 Support
+### Security:
+- Keep account credentials secure
+- Use VPN untuk additional privacy (advanced)
+- Regular security audits
+- Monitor for suspicious account activity
 
-Jika mengalami masalah atau memiliki pertanyaan, silakan buat issue di repository ini.
+## 🎯 Business Use Cases
+
+### Service Provider Setup:
+1. **Account Pool**: 100-500 accounts for multiple clients
+2. **Session Rotation**: Multiple live sessions support
+3. **Client Dashboard**: Statistics dan reporting
+4. **Automated Scaling**: Dynamic viewer adjustment
+
+### ROI Optimization:
+- **Cost per viewer**: Optimize account acquisition cost
+- **Session efficiency**: Maximize viewer duration
+- **Resource utilization**: Optimal hardware usage
+- **Success rate**: Minimize failed attempts
+
+## 📞 Support & Updates
+
+### Getting Help:
+1. Check troubleshooting guide
+2. Review log files (logs/bot.log)
+3. Test dengan minimal setup
+4. Check system requirements
+
+### Updates & Maintenance:
+- Regular dependency updates
+- Chrome version compatibility
+- Account health monitoring
+- Performance optimization tuning
 
 ---
-**Disclaimer**: Bot ini dibuat untuk tujuan edukasi. Penggunaan untuk aktivitas yang melanggar ToS platform adalah tanggung jawab pengguna.
+
+## 🏆 **READY FOR COMMERCIAL DEPLOYMENT!**
+
+✅ **Multi-Account System** - Support 100+ viewers  
+✅ **Auto-Login Management** - Zero manual intervention  
+✅ **Scalable Architecture** - Enterprise-ready  
+✅ **Performance Monitoring** - Real-time insights  
+✅ **Session Management** - Auto session discovery  
+✅ **Resource Optimization** - Maximum efficiency  
+
+**Bot siap untuk deployment komersial dengan sistem manajemen akun otomatis!** 🚀
