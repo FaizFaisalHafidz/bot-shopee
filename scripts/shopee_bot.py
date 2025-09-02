@@ -216,34 +216,48 @@ def kill_chrome_processes():
         print("[INFO] Continuing anyway...")
 
 def create_chrome_with_profile(profile_data, device_id, viewer_num):
-    """Buat Chrome instance menggunakan profile yang sudah login"""
+    """Buat Chrome instance dengan fresh isolated profile (no login required)"""
     try:
         print(f"   [DEBUG] Setting up Chrome for viewer #{viewer_num+1}")
         
-        # Extract profile information
+        # Extract profile information for display only
         if isinstance(profile_data, dict):
-            original_profile_path = profile_data.get('path')
             email = profile_data.get('email', 'Unknown')
             display_name = profile_data.get('display_name', 'Unknown')
-            name = profile_data.get('name', 'Unknown')
-            print(f"   [INFO] Using existing profile: {email} ({display_name})")
-            print(f"   [DEBUG] Profile path: {original_profile_path}")
+            print(f"   [INFO] Creating fresh viewer for reference: {email} ({display_name})")
+            print(f"   [NOTE] Using isolated profile - no existing login needed")
         else:
             print("[ERROR] Invalid profile data")
             return None
         
         options = Options()
         
-        # IMPORTANT: Use existing Chrome profile directly with OS-specific path conversion
-        # This preserves login sessions
-        user_data_dir, profile_directory = convert_profile_path_for_os(original_profile_path, name)
+        # Create fresh isolated profile directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        sessions_dir = os.path.join(current_dir, "..", "sessions", "bot_viewers")
+        profile_dir = os.path.join(sessions_dir, f"viewer_{viewer_num+1}")
+        
+        # Clean up existing if present
+        if os.path.exists(profile_dir):
+            import shutil
+            try:
+                shutil.rmtree(profile_dir)
+                print(f"   [DEBUG] Cleaned existing profile directory")
+            except Exception as e:
+                print(f"   [WARNING] Could not clean profile dir: {e}")
+        
+        # Create fresh directory
+        os.makedirs(profile_dir, exist_ok=True)
+        print(f"   [DEBUG] Fresh profile directory: {profile_dir}")
+        
+        # For Chrome arguments - ensure proper path format
+        if os.name == 'nt':  # Windows
+            user_data_dir = profile_dir.replace('/', '\\')
+        else:
+            user_data_dir = profile_dir
         
         options.add_argument(f'--user-data-dir="{user_data_dir}"')
-        if profile_directory:
-            options.add_argument(f'--profile-directory="{profile_directory}"')
-            print(f"   [DEBUG] Chrome args: --user-data-dir=\"{user_data_dir}\" --profile-directory=\"{profile_directory}\"")
-        else:
-            print(f"   [DEBUG] Chrome args: --user-data-dir=\"{user_data_dir}\" (Default profile)")
+        print(f"   [DEBUG] Chrome args: --user-data-dir=\"{user_data_dir}\" (Fresh isolated profile)")
         
         # Unique debugging port
         debug_port = 9222 + viewer_num
