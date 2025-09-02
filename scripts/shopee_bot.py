@@ -31,6 +31,57 @@ def generate_device_id():
     """Generate unique 32-character device ID"""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=32))
 
+def inject_google_login(driver, profile_email):
+    """Inject Google login session for Shopee"""
+    try:
+        print(f"   [INFO] Attempting to restore Google session for {profile_email}...")
+        
+        # First, go to Google to establish domain cookies
+        driver.get("https://accounts.google.com")
+        time.sleep(3)
+        
+        # Try to load saved cookies if available
+        cookies_file = f"../sessions/cookies_{profile_email.replace('@', '_at_').replace('.', '_')}.json"
+        
+        if os.path.exists(cookies_file):
+            print(f"   [INFO] Loading saved cookies from {cookies_file}")
+            try:
+                with open(cookies_file, 'r') as f:
+                    cookies = json.load(f)
+                    for cookie in cookies:
+                        try:
+                            driver.add_cookie(cookie)
+                        except Exception as cookie_error:
+                            print(f"   [DEBUG] Could not add cookie: {cookie_error}")
+                            
+                print(f"   [SUCCESS] Cookies loaded for {profile_email}")
+                
+                # Refresh to apply cookies
+                driver.refresh()
+                time.sleep(2)
+                
+            except Exception as e:
+                print(f"   [WARNING] Could not load cookies: {e}")
+        else:
+            print(f"   [INFO] No saved cookies found for {profile_email}")
+            
+        # Check if already logged in
+        try:
+            # Look for signs of being logged in to Google
+            current_url = driver.current_url
+            if "myaccount.google.com" in current_url or "accounts.google.com/signin/continue" in current_url:
+                print(f"   [SUCCESS] Google session restored for {profile_email}")
+                return True
+        except Exception as e:
+            print(f"   [DEBUG] Could not verify Google login status: {e}")
+            
+        print(f"   [INFO] Starting with clean session for {profile_email}")
+        return False
+        
+    except Exception as e:
+        print(f"   [WARNING] Could not inject Google login: {e}")
+        return False
+
 def get_available_profiles():
     """Ambil daftar profile Chrome yang sudah dideteksi"""
     try:
@@ -78,40 +129,40 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         
         # Extract profile information
         if isinstance(profile_data, dict):
-            profile_path = profile_data.get('path')
+            original_profile_path = profile_data.get('path')
             email = profile_data.get('email', 'Unknown')
             name = profile_data.get('name', 'Unknown')
             print(f"   [DEBUG] Using profile: {email} ({name})")
         else:
-            # Backward compatibility
-            profile_path = profile_data
+            original_profile_path = profile_data
             email = 'Unknown'
             
-        print(f"   [DEBUG] Profile path: {profile_path}")
+        print(f"   [DEBUG] Original profile: {original_profile_path}")
+        
+        # Create isolated profile directory for this viewer
+        base_dir = os.path.join(os.getcwd(), '..', 'sessions', 'isolated_profiles')
+        os.makedirs(base_dir, exist_ok=True)
+        
+        isolated_profile = os.path.join(base_dir, f"viewer_{viewer_num+1}_{email.replace('@', '_at_').replace('.', '_')}")
+        
+        # Remove existing isolated profile
+        if os.path.exists(isolated_profile):
+            import shutil
+            shutil.rmtree(isolated_profile)
+        
+        os.makedirs(isolated_profile, exist_ok=True)
+        print(f"   [DEBUG] Isolated profile: {isolated_profile}")
         
         options = Options()
         
-        # For Windows Chrome User Data structure
-        # Path: C:\Users\...\Chrome\User Data\Default or Profile 1
-        if "User Data" in profile_path:
-            user_data_dir = profile_path.split("User Data")[0] + "User Data"
-            profile_name = profile_path.split("User Data")[-1].strip("\\/")
-            
-            print(f"   [DEBUG] User Data Dir: {user_data_dir}")
-            print(f"   [DEBUG] Profile Directory: {profile_name}")
-            
-            options.add_argument(f'--user-data-dir="{user_data_dir}"')
-            if profile_name and profile_name != "Default":
-                options.add_argument(f'--profile-directory="{profile_name}"')
-        else:
-            # For other profile structures
-            options.add_argument(f'--user-data-dir="{profile_path}"')
+        # Use isolated profile directory
+        options.add_argument(f'--user-data-dir={isolated_profile}')
         
         # Unique debugging port for each instance
         debug_port = 9222 + viewer_num
         options.add_argument(f'--remote-debugging-port={debug_port}')
         
-        # Chrome options to preserve login state
+        # Chrome options for clean start
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-default-apps')
@@ -120,6 +171,9 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-web-security')
         options.add_argument('--allow-running-insecure-content')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-images')  # Faster loading
         
         # Anti-detection options
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -159,15 +213,43 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         try:
             service = Service()
             driver = webdriver.Chrome(service=service, options=options)
-            print(f"   [SUCCESS] Chrome launched for {email}")
+            print(f"   [SUCCESS] Chrome launched for {email} (isolated profile)")
         except Exception as e:
             print(f"   [DEBUG] System chromedriver failed, trying ChromeDriverManager...")
+            from webdriver_manager.chrome import ChromeDriverManager
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
             print(f"   [SUCCESS] Chrome launched for {email} (via ChromeDriverManager)")
         
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        # Copy cookies from original profile if available
+        try:
+            print(f"   [INFO] Attempting to copy session data from original profile...")
+            import sqlite3
+            import shutil
+            
+            # Try to copy essential files from original profile
+            essential_files = ['Cookies', 'Login Data', 'Web Data']
+            
+            for file_name in essential_files:
+                original_file = os.path.join(original_profile_path, file_name)
+                isolated_file = os.path.join(isolated_profile, 'Default', file_name)
+                
+                os.makedirs(os.path.join(isolated_profile, 'Default'), exist_ok=True)
+                
+                if os.path.exists(original_file):
+                    try:
+                        shutil.copy2(original_file, isolated_file)
+                        print(f"   [SUCCESS] Copied {file_name}")
+                    except Exception as copy_error:
+                        print(f"   [WARNING] Could not copy {file_name}: {copy_error}")
+                else:
+                    print(f"   [INFO] {file_name} not found in original profile")
+        except Exception as session_error:
+            print(f"   [WARNING] Could not copy session data: {session_error}")
+            print(f"   [INFO] Chrome will start with clean session")
         
         return driver
         
@@ -312,6 +394,10 @@ def main():
                 if driver is None:
                     print(f"ERROR: Gagal membuat viewer #{i+1}")
                     continue
+                
+                # Try to restore Google session
+                print(f"   [INFO] Attempting to restore login session...")
+                inject_google_login(driver, email)
                 
                 # Inject device fingerprint
                 inject_device_fingerprint(driver, device_id)
