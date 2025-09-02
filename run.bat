@@ -1,37 +1,90 @@
 @echo off
-title Shopee Live Bot - RDP Optimized
+title Bot Live Shopee - Ultimate Edition
 color 0A
-mode con: cols=80 lines=30
+
+cls
+echo.
+echo ==============================================================================
+echo                      BOT LIVE SHOPEE - ULTIMATE EDITION
+echo                       Cookie Authentication + API Join
+echo ==============================================================================
+echo.
+set /p session_id="Masukkan Session ID Live Shopee: "
+set /p viewer_count="Jumlah viewer yang diinginkan (default 10): "
+
+if "%viewer_count%"=="" set viewer_count=10
 
 echo.
-echo ==============================================================================
-echo                      SHOPEE LIVE BOT - RDP OPTIMIZED
-echo                     Organized Structure - Single Entry Point
-echo ==============================================================================
+echo Bot akan mulai dengan:
+echo - Session ID: %session_id%
+echo - Target Viewer: %viewer_count%
+echo - Mode: Cookie Auth + API Join
 echo.
-echo Bot organized in: bot-core\
-echo Available options:
+echo Bot akan otomatis harvest cookies dan join live...
+echo Tekan Enter untuk mulai atau Ctrl+C untuk batal...
+pause >nul
+
 echo.
-echo   [1] Quick Start - Real URL Bot (RDP Optimized)
-echo   [2] Advanced Bot Options  
-echo   [3] Setup Python Environment
-echo   [4] View Logs
-echo   [5] Clean Sessions
-echo   [0] Exit
-echo.
-echo ==============================================================================
-echo.
+echo [MEMULAI] Bot Live Shopee Ultimate...
+cd /d "%~dp0"
+python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
+pause
 
 :MENU
-set /p choice="Select option (0-5): "
+set /p choice="Select option (0-8): "
 
-if "%choice%"=="1" goto QUICK_START
-if "%choice%"=="2" goto ADVANCED
-if "%choice%"=="3" goto SETUP
-if "%choice%"=="4" goto LOGS
-if "%choice%"=="5" goto CLEAN
+if "%choice%"=="1" goto ULTIMATE_BOT
+if "%choice%"=="2" goto QUICK_START
+if "%choice%"=="3" goto QUICK_TEST
+if "%choice%"=="4" goto RDP_CHECK
+if "%choice%"=="5" goto ADVANCED
+if "%choice%"=="6" goto SETUP
+if "%choice%"=="7" goto LOGS
+if "%choice%"=="8" goto CLEAN
 if "%choice%"=="0" goto EXIT
 echo Invalid choice. Please try again.
+goto MENU
+
+:ULTIMATE_BOT
+cls
+echo.
+echo ==============================================================================
+echo                    ULTIMATE BOT - COOKIE HARVESTING + LIVE VIEWERS
+echo ==============================================================================
+echo.
+echo This bot will:
+echo - Harvest fresh cookies automatically
+echo - Create multiple live viewers with valid cookies
+echo - Auto-rotate cookies when they expire
+echo - Monitor and maintain viewer count
+echo.
+set /p session_id="Enter Shopee Live Session ID: "
+set /p viewer_count="Enter number of viewers (default 10): "
+set /p harvest_first="Harvest fresh cookies first? (y/N): "
+
+if "%viewer_count%"=="" set viewer_count=10
+if /i "%harvest_first%"=="y" (
+    set harvest_param=true
+) else (
+    set harvest_param=false
+)
+
+echo.
+echo Starting Ultimate Bot with:
+echo - Session ID: %session_id%
+echo - Target Viewers: %viewer_count%
+echo - Fresh Cookie Harvest: %harvest_param%
+echo - Auto Cookie Rotation: Enabled
+echo - Anti-Detection: Maximum
+echo.
+echo This may take 5-10 minutes for initial cookie harvesting...
+echo Press Enter to continue or Ctrl+C to cancel...
+pause >nul
+
+echo Starting Ultimate Shopee Bot...
+cd /d "%~dp0"
+python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count% %harvest_param%
+pause
 goto MENU
 
 :QUICK_START
@@ -58,6 +111,43 @@ pause >nul
 echo Starting bot...
 cd /d "%~dp0"
 python bot-core\bots\real_url_bot_rdp.py %session_id% %viewer_count%
+pause
+goto MENU
+
+:QUICK_TEST
+cls
+echo.
+echo ==============================================================================
+echo                         QUICK TEST - SINGLE VIEWER
+echo ==============================================================================
+echo.
+set /p session_id="Enter Shopee Live Session ID: "
+echo.
+echo Starting Quick Test with:
+echo - Session ID: %session_id%
+echo - Viewers: 1 (test mode)
+echo - Mode: RDP Ultra-Optimized
+echo.
+echo Press Enter to continue or Ctrl+C to cancel...
+pause >nul
+
+echo Starting quick test...
+cd /d "%~dp0"
+python bot-core\scripts\quick_test.py %session_id% 1
+pause
+goto MENU
+
+:RDP_CHECK
+cls
+echo.
+echo ==============================================================================
+echo                         RDP ENVIRONMENT CHECK
+echo ==============================================================================
+echo.
+echo Checking RDP environment and dependencies...
+echo.
+cd /d "%~dp0"
+python bot-core\scripts\check_rdp.py
 pause
 goto MENU
 
@@ -131,7 +221,7 @@ echo Checking Python installation...
 python --version
 echo.
 echo Installing required packages...
-pip install -r requirements.txt
+pip install -r bot-core\requirements.txt
 echo.
 echo Setup complete!
 pause

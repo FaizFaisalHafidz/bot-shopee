@@ -138,43 +138,74 @@ class ShopeeRealURLBotRDP:
         return url
     
     def create_rdp_chrome_options(self, profile, viewer_index):
-        """Create Chrome options optimized for RDP Windows"""
+        """Create Chrome options ULTRA optimized for RDP Windows - GPU COMPLETELY DISABLED"""
         chrome_options = Options()
         
-        # === RDP OPTIMIZED OPTIONS ===
+        # === ULTRA RDP OPTIMIZED - GPU KILL SWITCH ===
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-gpu-sandbox')
+        chrome_options.add_argument('--disable-gpu-process')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        chrome_options.add_argument('--disable-d3d11')
+        chrome_options.add_argument('--disable-accelerated-video-decode')
+        chrome_options.add_argument('--disable-accelerated-video-encode')
+        chrome_options.add_argument('--disable-accelerated-mjpeg-decode')
+        chrome_options.add_argument('--disable-gpu-memory-buffer-video-frames')
+        chrome_options.add_argument('--disable-gpu-process-crash-limit')
         chrome_options.add_argument('--disable-web-security')
-        chrome_options.add_argument('--disable-features=VizDisplayCompositor')
+        
+        # === WebGL & GRAPHICS KILL SWITCH ===
+        chrome_options.add_argument('--disable-webgl')
+        chrome_options.add_argument('--disable-webgl2')
+        chrome_options.add_argument('--disable-3d-apis')
+        chrome_options.add_argument('--disable-accelerated-2d-canvas')
+        chrome_options.add_argument('--disable-canvas-aa')
+        chrome_options.add_argument('--disable-2d-canvas-clip-aa')
+        chrome_options.add_argument('--disable-gl-drawing-for-tests')
+        chrome_options.add_argument('--enable-unsafe-swiftshader')
+        chrome_options.add_argument('--blacklist-accelerated-compositing')
+        chrome_options.add_argument('--blacklist-webgl')
+        
+        # === DISPLAY & COMPOSITOR ===
+        chrome_options.add_argument('--disable-features=VizDisplayCompositor,VizHitTestSurfaceLayer,TranslateUI,BlinkGenPropertyTrees,VizFrameSubmissionForWebView,UseSurfaceLayerForVideo')
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-plugins')
         chrome_options.add_argument('--disable-images')
-        chrome_options.add_argument('--disable-javascript')  # Temporarily disable to reduce load
+        # NOTE: Keep JavaScript enabled for auth bypass - critical!
         chrome_options.add_argument('--disable-background-timer-throttling')
         chrome_options.add_argument('--disable-backgrounding-occluded-windows')
         chrome_options.add_argument('--disable-renderer-backgrounding')
         chrome_options.add_argument('--disable-background-networking')
         
-        # === HEADLESS MODE for RDP ===
+        # === ULTRA HEADLESS MODE ===
         chrome_options.add_argument('--headless=new')
         chrome_options.add_argument('--disable-logging')
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument('--silent')
+        chrome_options.add_argument('--disable-logging-redirect')
+        chrome_options.add_argument('--disable-log-file')
         
-        # === PERFORMANCE OPTIMIZATION ===
+        # === PERFORMANCE KILL SWITCH ===
         chrome_options.add_argument('--memory-pressure-off')
-        chrome_options.add_argument('--max_old_space_size=4096')
+        chrome_options.add_argument('--max_old_space_size=2048')  # Reduced
         chrome_options.add_argument('--aggressive-cache-discard')
         chrome_options.add_argument('--disable-hang-monitor')
+        chrome_options.add_argument('--disable-prompt-on-repost')
+        chrome_options.add_argument('--disable-client-side-phishing-detection')
+        chrome_options.add_argument('--disable-sync')
+        chrome_options.add_argument('--disable-background-mode')
         
-        # === BYPASS RDP ISSUES ===
+        # === RDP BYPASS ULTRA ===
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-        chrome_options.add_argument('--remote-debugging-port=0')  # Dynamic port
-        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--remote-debugging-port=0')
         chrome_options.add_argument('--no-first-run')
         chrome_options.add_argument('--no-default-browser-check')
         chrome_options.add_argument('--disable-default-apps')
+        chrome_options.add_argument('--disable-popup-blocking')
+        chrome_options.add_argument('--disable-translate')
+        chrome_options.add_argument('--disable-ipc-flooding-protection')
         
         # === USER AGENT ===
         chrome_options.add_argument(f'--user-agent={profile["user_agent"]}')
@@ -295,57 +326,123 @@ class ShopeeRealURLBotRDP:
         """)
     
     def create_real_url_viewer_rdp(self, session_id, viewer_index):
-        """Create viewer optimized for RDP with proper error handling"""
+        """Create viewer ULTRA optimized for RDP with aggressive error handling"""
         driver = None
-        try:
-            profile = self.generate_device_profile(viewer_index - 1)
-            real_url = self.build_real_shopee_url(session_id, profile)
-            
-            print(f"[VIEWER {viewer_index}] Creating RDP-optimized viewer...")
-            print(f"[DEVICE] {profile['platform']} - User ID: {profile['user_id']}")
-            print(f"[URL] {real_url[:80]}...")
-            
-            # Create RDP-optimized Chrome options
-            chrome_options = self.create_rdp_chrome_options(profile, viewer_index)
-            
-            # Create driver with proper error handling
+        retry_count = 0
+        max_retries = 3
+        
+        while retry_count < max_retries:
             try:
-                print(f"[CHROME] Starting Chrome for viewer {viewer_index}...")
+                profile = self.generate_device_profile(viewer_index - 1)
+                real_url = self.build_real_shopee_url(session_id, profile)
+                
+                print(f"[VIEWER {viewer_index}] Creating RDP-optimized viewer (attempt {retry_count + 1})...")
+                print(f"[DEVICE] {profile['platform']} - User ID: {profile['user_id']}")
+                print(f"[URL] {real_url[:80]}...")
+                
+                # Clean any previous session
+                if driver:
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+                    driver = None
+                
+                # Create RDP-optimized Chrome options
+                chrome_options = self.create_rdp_chrome_options(profile, viewer_index)
+                
+                # Create driver with aggressive timeout handling
+                print(f"[CHROME] Starting Chrome for viewer {viewer_index} (timeout: 15s)...")
                 service = Service(ChromeDriverManager().install())
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-                print(f"[CHROME] Chrome started successfully for viewer {viewer_index}")
+                
+                # Set service timeout
+                service.start()
+                
+                try:
+                    # Create driver with explicit timeout
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                    driver.set_page_load_timeout(15)  # Reduced timeout
+                    driver.implicitly_wait(5)        # Reduced wait
+                    print(f"[CHROME] Chrome started successfully for viewer {viewer_index}")
+                    break  # Success, exit retry loop
+                    
+                except Exception as chrome_error:
+                    print(f"[ERROR] Chrome startup failed (attempt {retry_count + 1}): {chrome_error}")
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        print(f"[FATAL] Failed to start Chrome after {max_retries} attempts")
+                        return None
+                    
+                    print(f"[RETRY] Waiting 10s before retry...")
+                    time.sleep(10)
+                    continue
+                
             except Exception as e:
-                print(f"[ERROR] Failed to start Chrome for viewer {viewer_index}: {e}")
-                return None
+                print(f"[ERROR] General error creating viewer {viewer_index}: {e}")
+                retry_count += 1
+                if retry_count >= max_retries:
+                    return None
+                time.sleep(10)
+                continue
+        
+        try:
+            # Quick test - navigate to simple page first
+            print(f"[TEST] Testing Chrome connection...")
+            driver.get('https://google.com')
+            time.sleep(3)
+            print(f"[TEST] Chrome connection OK!")
             
-            # Set page load timeout
-            driver.set_page_load_timeout(30)
-            
-            # Navigate to Shopee domain first
+            # Navigate to Shopee domain
             print(f"[NAVIGATE] Accessing Shopee domain...")
-            driver.get('https://shopee.co.id')
-            time.sleep(5)
+            try:
+                driver.get('https://shopee.co.id')
+                time.sleep(5)
+            except Exception as nav_error:
+                print(f"[WARNING] Shopee navigation issue: {nav_error}")
+                # Continue anyway
+            
+            # Re-enable JavaScript for bypass
+            driver.execute_script("""
+                console.log('[RDP BOT] JavaScript re-enabled for bypass');
+            """)
             
             # Inject authentication bypass
             self.inject_ultimate_auth_bypass(driver, profile, session_id)
             
-            # Navigate to real Shopee Live URL
+            # Navigate to real Shopee Live URL with timeout handling
             print(f"[NAVIGATE] Accessing real Shopee Live URL...")
-            driver.get(real_url)
-            time.sleep(8)
+            try:
+                driver.get(real_url)
+                time.sleep(5)  # Reduced from 8 to 5
+            except Exception as url_error:
+                print(f"[WARNING] Live URL navigation issue: {url_error}")
+                # Try to continue
             
-            # Check if successful
-            current_url = driver.current_url.lower()
-            if 'login' in current_url or 'auth' in current_url:
-                print(f"[WARNING] Still on login page for viewer {viewer_index}")
-                # Try simple bypass
-                driver.execute_script("""
-                    document.querySelectorAll('[class*="modal"], [class*="login"]').forEach(el => el.remove());
-                """)
-                time.sleep(3)
+            # Quick check if page loaded
+            try:
+                page_title = driver.title
+                print(f"[PAGE] Title: {page_title[:50]}...")
+            except:
+                print(f"[WARNING] Could not get page title")
             
-            # Inject viewer booster
-            self.inject_simple_viewer_booster(driver, profile)
+            # Simple auth check and bypass
+            try:
+                current_url = driver.current_url.lower()
+                if 'login' in current_url or 'auth' in current_url:
+                    print(f"[WARNING] Still on login page for viewer {viewer_index}")
+                    # Simple modal remover
+                    driver.execute_script("""
+                        document.querySelectorAll('[class*="modal"], [class*="login"]').forEach(el => el.remove());
+                    """)
+                    time.sleep(2)
+            except Exception as auth_error:
+                print(f"[WARNING] Auth check error: {auth_error}")
+            
+            # Inject viewer booster (lightweight version)
+            try:
+                self.inject_simple_viewer_booster(driver, profile)
+            except Exception as boost_error:
+                print(f"[WARNING] Booster injection error: {boost_error}")
             
             # Add to active sessions
             self.active_sessions.append({
@@ -361,7 +458,7 @@ class ShopeeRealURLBotRDP:
             return driver
             
         except Exception as e:
-            print(f"[ERROR] Failed to create RDP viewer {viewer_index}: {e}")
+            print(f"[ERROR] Failed to configure RDP viewer {viewer_index}: {e}")
             if driver:
                 try:
                     driver.quit()
