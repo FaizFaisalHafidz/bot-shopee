@@ -216,46 +216,49 @@ def kill_chrome_processes():
         print("[INFO] Continuing anyway...")
 
 def create_chrome_with_profile(profile_data, device_id, viewer_num):
-    """Buat Chrome instance dengan fresh isolated profile (no login required)"""
+    """Buat Chrome instance dengan existing profile yang sudah login"""
     try:
         print(f"   [DEBUG] Setting up Chrome for viewer #{viewer_num+1}")
         
-        # Extract profile information for display only
+        # Extract profile information
         if isinstance(profile_data, dict):
             email = profile_data.get('email', 'Unknown')
             display_name = profile_data.get('display_name', 'Unknown')
-            print(f"   [INFO] Creating fresh viewer for reference: {email} ({display_name})")
-            print(f"   [NOTE] Using isolated profile - no existing login needed")
+            profile_path = profile_data.get('path', '')
+            profile_name = profile_data.get('name', 'Default')
+            print(f"   [INFO] Using EXISTING profile: {email} ({display_name})")
+            print(f"   [DEBUG] Profile: {profile_name}")
         else:
             print("[ERROR] Invalid profile data")
             return None
         
         options = Options()
         
-        # Simplified Chrome options for Windows compatibility
-        # Use temporary directory instead of persistent profile
-        import tempfile
-        temp_dir = tempfile.mkdtemp(prefix=f'chrome_viewer_{viewer_num+1}_')
-        print(f"   [DEBUG] Using temporary profile: {temp_dir}")
+        # Use existing Chrome profile with login
+        if os.name == 'nt':  # Windows
+            user_data_dir = r"C:\Users\Administrator\AppData\Local\Google\Chrome\User Data"
+            profile_directory = profile_name
+        else:  # macOS/Linux
+            user_data_dir = os.path.expanduser("~/Library/Application Support/Google/Chrome")
+            profile_directory = profile_name
         
-        # Basic Chrome options that work reliably
-        options.add_argument(f'--user-data-dir={temp_dir}')
+        print(f"   [DEBUG] User Data Dir: {user_data_dir}")
+        print(f"   [DEBUG] Profile Directory: {profile_directory}")
+        
+        # Essential Chrome options
+        options.add_argument(f'--user-data-dir="{user_data_dir}"')
+        options.add_argument(f'--profile-directory="{profile_directory}"')
         options.add_argument(f'--remote-debugging-port={9222 + viewer_num}')
         
-        # Essential options only
+        # Basic options
         options.add_argument('--no-first-run')
         options.add_argument('--no-default-browser-check')
         options.add_argument('--disable-blink-features=AutomationControlled')
         
-        # Windows specific fixes
+        # Windows specific fixes (minimal to avoid conflicts)
         if os.name == 'nt':
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--no-sandbox')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--disable-software-rasterizer')
-        
-        # CRITICAL: Don't disable web security - it breaks login sessions
-        # options.add_argument('--disable-web-security')  # REMOVED
         
         # Anti-detection
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -312,7 +315,7 @@ def create_chrome_with_profile(profile_data, device_id, viewer_num):
         # Remove automation indicators
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        print(f"   [INFO] Chrome should now show existing login for: {email}")
+        print(f"   [SUCCESS] Chrome opened with existing login: {email}")
         return driver
         
     except Exception as e:
