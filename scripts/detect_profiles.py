@@ -1,7 +1,13 @@
 import os
 import sys
-from pathlib import Path
 import json
+from pathlib import Path
+
+# Fix Windows encoding
+if os.name == 'nt':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 def find_chrome_profiles():
     """Cari semua profile Chrome di sistem"""
@@ -99,18 +105,18 @@ if __name__ == "__main__":
         profiles = find_chrome_profiles()
         
         if not profiles:
-            print("❌ Tidak ada profile Chrome yang ditemukan!")
-            print("💡 Pastikan Chrome sudah diinstall dan pernah digunakan.")
+            print("ERROR: Tidak ada profile Chrome yang ditemukan!")
+            print("INFO: Pastikan Chrome sudah diinstall dan pernah digunakan.")
             print("[DEBUG] No profiles found in any search location")
             sys.exit(1)
         
-        print(f"📋 Ditemukan {len(profiles)} profile Chrome:")
+        print(f"INFO: Ditemukan {len(profiles)} profile Chrome:")
         print()
         
         for i, profile in enumerate(profiles):
             print(f"   {i+1}. {profile['email']}")
-            print(f"      📁 Path: {profile['path']}")
-            print(f"      🏠 Location: {profile['location']}")
+            print(f"      Path: {profile['path']}")
+            print(f"      Location: {profile['location']}")
             print()
         
         # Save profiles to temp file

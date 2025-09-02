@@ -6,6 +6,12 @@ import string
 import json
 from pathlib import Path
 
+# Fix Windows encoding
+if os.name == 'nt':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+
 # Import Selenium
 try:
     from selenium import webdriver
@@ -96,7 +102,7 @@ def inject_device_fingerprint(driver, device_id):
         get: () => {random.choice([1080, 768, 900, 1050])}
     }});
     
-    console.log('🔧 Device fingerprint injected:', '{device_id}');
+    console.log('Device fingerprint injected:', '{device_id}');
     """
     
     try:
@@ -124,8 +130,8 @@ def main():
         
         print(f"[DEBUG] Parameters: session={session_id}, viewers={max_viewers}, delay={delay_seconds}")
         
-        print(f"🎯 Target: {max_viewers} viewers untuk session {session_id}")
-        print(f"📺 URL: https://live.shopee.co.id/share?from=live&session={session_id}&in=1")
+        print(f"TARGET: {max_viewers} viewers untuk session {session_id}")
+        print(f"URL: https://live.shopee.co.id/share?from=live&session={session_id}&in=1")
         print()
         
         # Ambil profile yang tersedia
@@ -133,12 +139,12 @@ def main():
         available_profiles = get_available_profiles()
         
         if not available_profiles:
-            print("❌ Tidak ada profile Google Chrome yang ditemukan!")
+            print("ERROR: Tidak ada profile Google Chrome yang ditemukan!")
             print("[DEBUG] temp_profiles.json is empty or missing")
             input("Tekan Enter untuk keluar...")
             return
         
-        print(f"📋 Ditemukan {len(available_profiles)} profile Chrome:")
+        print(f"INFO: Ditemukan {len(available_profiles)} profile Chrome:")
         for i, profile in enumerate(available_profiles):
             print(f"   {i+1}. {profile['email']}")
         print()
@@ -151,32 +157,32 @@ def main():
                 profile = available_profiles[i]
                 device_id = generate_device_id()
                 
-                print(f"🚀 Memulai viewer #{i+1}: {profile['email']}")
-                print(f"   📱 Device ID: {device_id[:8]}...{device_id[-4:]}")
-                print(f"   📁 Profile: {profile['name']}")
+                print(f"STARTING: Memulai viewer #{i+1}: {profile['email']}")
+                print(f"   Device ID: {device_id[:8]}...{device_id[-4:]}")
+                print(f"   Profile: {profile['name']}")
                 
                 # Buat Chrome instance dengan profile
                 print(f"   [DEBUG] Creating Chrome instance with profile: {profile['path']}")
                 driver = create_chrome_with_profile(profile['path'], device_id, i)
                 
                 if driver is None:
-                    print(f"❌ Gagal membuat viewer #{i+1}")
+                    print(f"ERROR: Gagal membuat viewer #{i+1}")
                     continue
                 
                 try:
                     # Buka Shopee untuk set device fingerprint
-                    print(f"   🔧 Setting device fingerprint...")
+                    print(f"   Setting device fingerprint...")
                     driver.get("https://shopee.co.id")
                     time.sleep(2)
                     
                     # Inject device fingerprint
                     if inject_device_fingerprint(driver, device_id):
-                        print(f"   ✅ Device fingerprint berhasil di-inject")
+                        print(f"   SUCCESS: Device fingerprint berhasil di-inject")
                     else:
-                        print(f"   ⚠️  Warning: Device fingerprint gagal di-inject")
+                        print(f"   WARNING: Device fingerprint gagal di-inject")
                     
                     # Buka live stream
-                    print(f"   🎥 Membuka live stream...")
+                    print(f"   Membuka live stream...")
                     driver.get(live_url)
                     time.sleep(3)
                     
@@ -187,16 +193,16 @@ def main():
                         'number': i+1
                     })
                     
-                    print(f"   ✅ Viewer #{i+1} berhasil terhubung!")
+                    print(f"   SUCCESS: Viewer #{i+1} berhasil terhubung!")
                     print()
                     
                     # Delay sebelum viewer berikutnya
                     if i < min(max_viewers, len(available_profiles)) - 1:
-                        print(f"⏱️  Menunggu {delay_seconds} detik sebelum viewer berikutnya...")
+                        print(f"WAITING: Menunggu {delay_seconds} detik sebelum viewer berikutnya...")
                         time.sleep(delay_seconds)
                     
                 except Exception as e:
-                    print(f"❌ Error pada viewer #{i+1}: {e}")
+                    print(f"ERROR: Error pada viewer #{i+1}: {e}")
                     print(f"[DEBUG] Full error: {str(e)}")
                     try:
                         driver.quit()
@@ -204,24 +210,24 @@ def main():
                         pass
             
             if not viewers:
-                print("❌ Tidak ada viewers yang berhasil dibuat!")
+                print("ERROR: Tidak ada viewers yang berhasil dibuat!")
                 input("Tekan Enter untuk keluar...")
                 return
             
             print("="*60)
-            print(f"🎉 SEMUA {len(viewers)} VIEWERS BERHASIL DIMULAI!")
+            print(f"SUCCESS: SEMUA {len(viewers)} VIEWERS BERHASIL DIMULAI!")
             print("="*60)
             print()
             
-            print("📋 DETAIL VIEWERS:")
+            print("DETAIL VIEWERS:")
             for viewer in viewers:
-                print(f"   👤 Viewer #{viewer['number']}: {viewer['email']}")
-                print(f"      📱 Device ID: {viewer['device_id']}")
+                print(f"   Viewer #{viewer['number']}: {viewer['email']}")
+                print(f"      Device ID: {viewer['device_id']}")
             print()
             
-            print("🎯 Bot sedang berjalan! Cek live stream Anda - jumlah viewer seharusnya bertambah!")
-            print("💡 Jangan tutup jendela Chrome yang terbuka.")
-            print("🛑 Tekan Ctrl+C untuk menghentikan bot...")
+            print("INFO: Bot sedang berjalan! Cek live stream Anda - jumlah viewer seharusnya bertambah!")
+            print("INFO: Jangan tutup jendela Chrome yang terbuka.")
+            print("INFO: Tekan Ctrl+C untuk menghentikan bot...")
             print()
             
             # Monitor viewers
@@ -237,28 +243,28 @@ def main():
                     except:
                         pass
                 
-                print(f"📊 Status: {active_count}/{len(viewers)} viewers masih aktif - {time.strftime('%H:%M:%S')}")
+                print(f"STATUS: {active_count}/{len(viewers)} viewers masih aktif - {time.strftime('%H:%M:%S')}")
                 
                 if active_count == 0:
-                    print("⚠️  Semua viewers sudah tidak aktif.")
+                    print("WARNING: Semua viewers sudah tidak aktif.")
                     break
             
         except KeyboardInterrupt:
-            print("\n🛑 Bot dihentikan oleh user...")
+            print("\nINFO: Bot dihentikan oleh user...")
         except Exception as e:
-            print(f"\n❌ Error during bot execution: {e}")
+            print(f"\nERROR: Error during bot execution: {e}")
             import traceback
             traceback.print_exc()
         finally:
             # Cleanup
-            print("🧹 Membersihkan viewers...")
+            print("INFO: Membersihkan viewers...")
             for viewer in viewers:
                 try:
                     viewer['driver'].quit()
-                    print(f"   ✅ Viewer {viewer['email']} ditutup")
+                    print(f"   SUCCESS: Viewer {viewer['email']} ditutup")
                 except Exception as e:
-                    print(f"   ⚠️  Error closing viewer: {e}")
-            print("✅ Semua viewers berhasil ditutup. Bot selesai.")
+                    print(f"   WARNING: Error closing viewer: {e}")
+            print("SUCCESS: Semua viewers berhasil ditutup. Bot selesai.")
             print()
             input("Tekan Enter untuk keluar...")
     
