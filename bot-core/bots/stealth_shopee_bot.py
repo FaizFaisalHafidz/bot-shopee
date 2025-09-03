@@ -1,0 +1,391 @@
+#!/usr/bin/env python3
+"""
+STEALTH SHOPEE BOT - Anti-Detection Version
+Menggunakan teknik evasion untuk menghindari anti-bot detection
+"""
+
+import time
+import random
+import json
+import os
+import threading
+import requests
+import csv
+import uuid
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+class StealthShopeeBot:
+    def __init__(self):
+        self.session_cookies = []
+        self.active_viewers = []
+        self.session_id = None
+        self.target_viewers = 10
+        self.verified_cookies = []
+        
+        # Setup logging
+        log_dir = os.path.join('bot-core', 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        self.log_file = os.path.join(log_dir, f'stealth_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        
+        # Load verified cookies
+        self.load_verified_cookies()
+        
+    def load_verified_cookies(self):
+        """Load verified cookies from CSV file"""
+        csv_path = os.path.join('bot-core', 'accounts', 'verified_cookies.csv')
+        if not os.path.exists(csv_path):
+            self.log("❌ verified_cookies.csv tidak ditemukan!")
+            return
+            
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row['status'] == 'active':
+                        self.verified_cookies.append({
+                            'account_id': row['account_id'],
+                            'spc_f': row['spc_f'],
+                            'spc_u': row['spc_u'], 
+                            'spc_st': row['spc_st'],
+                            'spc_ec': row['spc_ec'],
+                            'device_id': row['device_id'],
+                            'user_agent': row['user_agent']
+                        })
+            
+            self.log(f"✅ Loaded {len(self.verified_cookies)} stealth cookies")
+        except Exception as e:
+            self.log(f"❌ Error loading cookies: {e}")
+    
+    def log(self, message):
+        """Log message to console and file"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_msg = f"[{timestamp}] {message}"
+        print(log_msg)
+        
+        try:
+            with open(self.log_file, 'a', encoding='utf-8') as f:
+                f.write(log_msg + "\\n")
+        except:
+            pass
+    
+    def create_stealth_chrome_options(self, profile_index, fingerprint):
+        """Create ultra-stealth Chrome options"""
+        chrome_options = Options()
+        
+        # Essential stealth arguments
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        
+        # Anti-detection
+        chrome_options.add_argument('--disable-web-security')
+        chrome_options.add_argument('--disable-features=VizDisplayCompositor')
+        chrome_options.add_argument('--disable-ipc-flooding-protection')
+        chrome_options.add_argument('--disable-renderer-backgrounding')
+        chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+        chrome_options.add_argument('--disable-client-side-phishing-detection')
+        
+        # Minimal resource usage
+        chrome_options.add_argument('--disable-logging')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--log-level=3')
+        chrome_options.add_argument('--silent')
+        
+        # Custom user agent per viewer
+        chrome_options.add_argument(f'--user-agent={fingerprint["user_agent"]}')
+        
+        # Unique profile directory
+        profile_dir = os.path.abspath(os.path.join('bot-core', 'sessions', 'stealth', f'profile_{profile_index}_{random.randint(10000,99999)}'))
+        os.makedirs(profile_dir, exist_ok=True)
+        chrome_options.add_argument(f'--user-data-dir={profile_dir}')
+        
+        return chrome_options
+    
+    def generate_stealth_fingerprint(self, viewer_index):
+        """Generate comprehensive stealth fingerprint"""
+        # Unique device ID untuk menghindari duplicate detection
+        device_id = str(uuid.uuid4())
+        
+        # Pool user agents yang berbeda-beda
+        user_agents = [
+            f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(115, 121)}.0.{random.randint(1000, 9999)}.{random.randint(100, 999)} Safari/537.36",
+            f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(15, 16)}_{random.randint(0, 7)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(115, 121)}.0.{random.randint(1000, 9999)}.{random.randint(100, 999)} Safari/537.36",
+            f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(115, 121)}.0.{random.randint(1000, 9999)}.{random.randint(100, 999)} Safari/537.36"
+        ]
+        
+        return {
+            'device_id': device_id,
+            'user_agent': user_agents[viewer_index % len(user_agents)],
+            'screen_width': random.randint(1366, 1920),
+            'screen_height': random.randint(768, 1080),
+            'color_depth': random.choice([24, 32]),
+            'timezone': random.choice(['Asia/Jakarta', 'Asia/Makassar']),
+            'language': random.choice(['id-ID', 'id', 'en-US']),
+            'platform': random.choice(['Win32', 'MacIntel', 'Linux x86_64'])
+        }
+    
+    def apply_stealth_scripts(self, driver, fingerprint):
+        """Apply comprehensive anti-detection scripts"""
+        # Remove webdriver property
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        # Mock chrome runtime
+        driver.execute_script("window.chrome = {runtime: {}}")
+        
+        # Mock plugins
+        driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]})")
+        
+        # Set languages
+        driver.execute_script(f"Object.defineProperty(navigator, 'languages', {{get: () => ['{fingerprint['language']}', 'en']}})")
+        
+        # Set platform
+        driver.execute_script(f"Object.defineProperty(navigator, 'platform', {{get: () => '{fingerprint['platform']}'}})")
+        
+        # Set screen properties
+        driver.execute_script(f"""
+            Object.defineProperty(screen, 'width', {{get: () => {fingerprint['screen_width']}}});
+            Object.defineProperty(screen, 'height', {{get: () => {fingerprint['screen_height']}}});
+            Object.defineProperty(screen, 'colorDepth', {{get: () => {fingerprint['color_depth']}}});
+        """)
+        
+        # Mock device memory (anti-fingerprinting)
+        driver.execute_script("Object.defineProperty(navigator, 'deviceMemory', {get: () => Math.floor(Math.random() * 8) + 4})")
+        
+        # Hide automation indicators
+        driver.execute_script("window.navigator.chrome = {runtime: {}}")
+        driver.execute_script("Object.defineProperty(navigator, 'permissions', {get: () => undefined})")
+    
+    def human_like_delay(self, min_seconds=2, max_seconds=8):
+        """Random human-like delay"""
+        delay = random.uniform(min_seconds, max_seconds)
+        time.sleep(delay)
+        return delay
+    
+    def create_stealth_browser_viewer(self, cookie_data, viewer_index):
+        """Create stealth browser viewer dengan full anti-detection"""
+        driver = None
+        try:
+            self.log(f"[STEALTH {viewer_index}] 🥷 Starting stealth mode...")
+            
+            # Generate unique fingerprint
+            fingerprint = self.generate_stealth_fingerprint(viewer_index)
+            self.log(f"[STEALTH {viewer_index}] 🎭 Device: {fingerprint['device_id'][:8]}...")
+            
+            # Create stealth Chrome
+            chrome_options = self.create_stealth_chrome_options(f"stealth_{viewer_index}", fingerprint)
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+            
+            # Apply stealth scripts
+            self.apply_stealth_scripts(driver, fingerprint)
+            
+            # Phase 1: Visit Google first (simulate normal browsing)
+            self.log(f"[STEALTH {viewer_index}] 🔍 Simulating normal browsing...")
+            driver.get("https://www.google.com")
+            self.human_like_delay(2, 4)
+            
+            # Phase 2: Visit Shopee main page
+            self.log(f"[STEALTH {viewer_index}] 🛒 Visiting Shopee...")
+            driver.get("https://shopee.co.id")
+            self.human_like_delay(3, 6)
+            
+            # Phase 3: Clear and inject cookies
+            driver.delete_all_cookies()
+            
+            essential_cookies = [
+                {'name': 'SPC_F', 'value': cookie_data['cookies']['SPC_F']},
+                {'name': 'SPC_U', 'value': cookie_data['cookies']['SPC_U']},
+                {'name': 'SPC_ST', 'value': cookie_data['cookies']['SPC_ST']},
+                {'name': 'SPC_EC', 'value': cookie_data['cookies']['SPC_EC']},
+            ]
+            
+            for cookie in essential_cookies:
+                try:
+                    driver.add_cookie({
+                        'name': cookie['name'],
+                        'value': cookie['value'],
+                        'domain': '.shopee.co.id',
+                        'path': '/'
+                    })
+                except Exception as e:
+                    self.log(f"[STEALTH {viewer_index}] ⚠️ Cookie {cookie['name']}: {e}")
+            
+            # Phase 4: Refresh with cookies
+            driver.refresh()
+            self.human_like_delay(3, 5)
+            
+            # Phase 5: Navigate to live with simple URL
+            live_url = f"https://live.shopee.co.id/share?from=live&session={self.session_id}"
+            self.log(f"[STEALTH {viewer_index}] 📺 Opening live: {live_url}")
+            
+            driver.get(live_url)
+            self.human_like_delay(5, 10)
+            
+            # Phase 6: Check for success/blocks
+            current_url = driver.current_url
+            page_source = driver.page_source.lower()
+            
+            # Check for anti-bot patterns
+            blocked_patterns = ['captcha', 'verify', 'anti_bot', 'robot', 'blocked']
+            if any(pattern in current_url.lower() for pattern in blocked_patterns):
+                self.log(f"[STEALTH {viewer_index}] 🚫 BLOCKED: {current_url}")
+                driver.quit()
+                return False
+            
+            if any(pattern in page_source for pattern in blocked_patterns):
+                self.log(f"[STEALTH {viewer_index}] 🚫 CONTENT BLOCKED")
+                driver.quit()
+                return False
+            
+            # Success check
+            if 'live.shopee.co.id' in current_url and 'login' not in current_url:
+                self.log(f"[STEALTH {viewer_index}] ✅ STEALTH SUCCESS!")
+                self.log(f"[STEALTH {viewer_index}] Final URL: {current_url}")
+                
+                # Add to active viewers
+                self.active_viewers.append({
+                    'driver': driver,
+                    'viewer_id': viewer_index,
+                    'type': 'stealth_browser',
+                    'status': 'active',
+                    'account_id': cookie_data.get('account_id', f'stealth_{viewer_index}'),
+                    'device_id': fingerprint['device_id'],
+                    'created_at': datetime.now()
+                })
+                
+                return True
+            else:
+                self.log(f"[STEALTH {viewer_index}] ❌ LOGIN REDIRECT")
+                driver.quit()
+                return False
+                
+        except Exception as e:
+            self.log(f"[STEALTH {viewer_index}] 💥 ERROR: {e}")
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+            return False
+    
+    def start_stealth_bot(self, session_id, target_viewers=3):
+        """Start stealth bot"""
+        self.session_id = session_id
+        
+        self.log("=" * 60)
+        self.log("🥷 STEALTH SHOPEE BOT")
+        self.log("=" * 60)
+        self.log(f"🎯 Session: {session_id}")
+        self.log(f"🎭 Target: {target_viewers} stealth viewers")
+        self.log("=" * 60)
+        
+        if not self.verified_cookies:
+            self.log("❌ No cookies available!")
+            return
+        
+        # Prepare session cookies
+        cookies_available = min(target_viewers, len(self.verified_cookies))
+        session_cookies = []
+        
+        for i in range(cookies_available):
+            cookie_data = self.verified_cookies[i]
+            session_cookie = {
+                'cookies': {
+                    'SPC_F': cookie_data['spc_f'],
+                    'SPC_U': cookie_data['spc_u'],
+                    'SPC_ST': cookie_data['spc_st'],
+                    'SPC_EC': cookie_data['spc_ec']
+                },
+                'account_id': cookie_data['account_id']
+            }
+            session_cookies.append(session_cookie)
+        
+        self.log(f"\\n🥷 LAUNCHING {len(session_cookies)} STEALTH BROWSERS...")
+        
+        # Launch browsers sequentially (to avoid detection)
+        successful_viewers = 0
+        for i, cookie_data in enumerate(session_cookies):
+            self.log(f"\\n--- STEALTH VIEWER {i+1}/{len(session_cookies)} ---")
+            
+            if self.create_stealth_browser_viewer(cookie_data, i + 1):
+                successful_viewers += 1
+            
+            # Delay between launches
+            if i < len(session_cookies) - 1:
+                delay = random.uniform(10, 20)
+                self.log(f"⏳ Delay {delay:.1f}s before next viewer...")
+                time.sleep(delay)
+        
+        # Final status
+        self.log("\\n" + "=" * 60)
+        self.log("🥷 STEALTH BOT STATUS")
+        self.log(f"✅ Successful: {successful_viewers}/{target_viewers}")
+        self.log(f"🎭 Active Stealth Browsers: {len(self.active_viewers)}")
+        self.log("=" * 60)
+        
+        if successful_viewers > 0:
+            self.log("\\n💚 Stealth viewers active! Press Ctrl+C to stop...")
+            try:
+                while True:
+                    time.sleep(30)
+                    self.stealth_health_check()
+            except KeyboardInterrupt:
+                self.log("\\n🛑 Stopping stealth bot...")
+                self.cleanup_stealth()
+        else:
+            self.log("❌ No stealth viewers created!")
+    
+    def stealth_health_check(self):
+        """Check stealth viewers health"""
+        alive_count = 0
+        for viewer in self.active_viewers[:]:
+            try:
+                viewer['driver'].current_url
+                alive_count += 1
+            except:
+                self.active_viewers.remove(viewer)
+                self.log(f"❌ Stealth viewer {viewer['viewer_id']} died")
+        
+        self.log(f"💚 Health: {alive_count} stealth browsers alive")
+    
+    def cleanup_stealth(self):
+        """Cleanup stealth resources"""
+        self.log("🧹 Cleaning up stealth browsers...")
+        for viewer in self.active_viewers:
+            if 'driver' in viewer:
+                try:
+                    viewer['driver'].quit()
+                except:
+                    pass
+
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) >= 3:
+        # Run dengan arguments dari run.bat
+        session_id = sys.argv[1]
+        viewer_count = int(sys.argv[2])
+        
+        print("🥷" + "=" * 60)
+        print("           STEALTH SHOPEE BOT - Windows Mode")
+        print("🥷" + "=" * 60)
+        
+        bot = StealthShopeeBot()
+        bot.start_stealth_bot(session_id, viewer_count)
+    else:
+        # Interactive mode
+        session_id = input("Session ID: ").strip()
+        viewer_count = int(input("Jumlah viewers: ").strip())
+        
+        bot = StealthShopeeBot()
+        bot.start_stealth_bot(session_id, viewer_count)

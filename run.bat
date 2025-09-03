@@ -1,25 +1,43 @@
 @echo off
-title NEO - Bot Views Shopee
+title NEO - Stealth Shopee Bot
 color 0A
 
 cls
 echo.
 echo ==============================================================================
-echo                           NEO - BOT VIEWS SHOPEE
+echo                        NEO - STEALTH SHOPEE BOT
+echo                       Anti-Detection Technology
 echo ==============================================================================
 echo.
+echo Pilih Bot Mode:
+echo [1] STEALTH BOT (Recommended - Anti Detection)
+echo [2] ULTIMATE BOT (Standard)
+echo.
+set /p bot_mode="Pilih mode (1/2): "
+
+echo.
 set /p session_id="Session ID: "
-set /p viewer_count="Jumlah viewer (default 10): "
+set /p viewer_count="Jumlah viewer (max 3): "
 
-if "%viewer_count%"=="" set viewer_count=10
+if "%viewer_count%"=="" set viewer_count=3
 
 echo.
-echo Memulai bot...
-cd /d "%~dp0"
-echo Mengaktifkan Python environment...
-call venv\Scripts\activate
-echo Menjalankan: python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
-python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
+if "%bot_mode%"=="1" (
+    echo 🥷 Menjalankan STEALTH BOT...
+    echo Target: %viewer_count% stealth viewers
+    echo Session: %session_id%
+    cd /d "%~dp0"
+    call venv\Scripts\activate
+    python bot-core\bots\stealth_shopee_bot.py %session_id% %viewer_count%
+) else (
+    echo 🚀 Menjalankan ULTIMATE BOT...
+    echo Target: %viewer_count% viewers  
+    echo Session: %session_id%
+    cd /d "%~dp0"
+    call venv\Scripts\activate
+    python bot-core\bots\ultimate_shopee_bot.py %session_id% %viewer_count%
+)
+
 echo.
-echo Bot selesai atau error terjadi.
+echo Bot selesai. Press any key to exit...
 pause
