@@ -137,11 +137,11 @@ cache/
 # SENSITIVE DATA & CREDENTIALS
 # ==============================================================================
 # Account files (sensitive data)
-accounts/
+# accounts/
 google_accounts*.csv
 shopee_accounts.csv
 account_*.csv
-#input.csv
+input.csv
 
 # Configuration with sensitive data
 config_local.json
