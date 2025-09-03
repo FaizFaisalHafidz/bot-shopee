@@ -9,6 +9,363 @@ import random
 import json
 import os
 import requests
+import csv
+import uuid
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+class NetworkInterceptorBot:
+    def __init__(self):
+        self.active_viewers = []
+        self.session_id = None
+        self.verified_cookies = []
+        
+        # Setup logging
+        log_dir = os.path.join('bot-core', 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        self.log_file = os.path.join(log_dir, f'network_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        
+        # Load verified cookies
+        self.load_verified_cookies()
+    
+    def load_verified_cookies(self):
+        """Load verified cookies from CSV file"""
+        csv_path = os.path.join('bot-core', 'accounts', 'verified_cookies.csv')
+        if not os.path.exists(csv_path):
+            self.log("❌ verified_cookies.csv tidak ditemukan!")
+            return
+            
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row['status'] == 'active':
+                        self.verified_cookies.append({
+                            'account_id': row['account_id'],
+                            'spc_f': row['spc_f'],
+                            'spc_u': row['spc_u'], 
+                            'spc_st': row['spc_st'],
+                            'spc_ec': row['spc_ec'],
+                            'device_id': row['device_id'],
+                            'user_agent': row['user_agent']
+                        })
+            
+            self.log(f"✅ Loaded {len(self.verified_cookies)} network cookies")
+        except Exception as e:
+            self.log(f"❌ Error loading cookies: {e}")
+    
+    def log(self, message):
+        """Log message to console and file"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_msg = f"[{timestamp}] {message}"
+        print(log_msg)
+        
+        try:
+            with open(self.log_file, 'a', encoding='utf-8') as f:
+                f.write(log_msg + "\n")
+        except:
+            pass
+    
+    def test_pure_api_method(self, session_id):
+        """Test pure API method without browser"""
+        self.log("🌐 === PURE API METHOD TEST ===")
+        
+        success_count = 0
+        
+        for i, cookie_data in enumerate(self.verified_cookies):
+            self.log(f"\n--- API JOIN {i+1}/{len(self.verified_cookies)} ---")
+            self.log(f"Account: {cookie_data['account_id']}")
+            
+            try:
+                # Multiple API endpoints to try
+                endpoints = [
+                    f"https://live.shopee.co.id/api/v1/session/{session_id}/joinv2",
+                    f"https://live.shopee.co.id/api/v1/session/{session_id}/join",
+                    f"https://shopee.co.id/api/v4/live/session/{session_id}/join"
+                ]
+                
+                for endpoint in endpoints:
+                    try:
+                        cookies = {
+                            'SPC_F': cookie_data['spc_f'],
+                            'SPC_U': cookie_data['spc_u'],
+                            'SPC_ST': cookie_data['spc_st'],
+                            'SPC_EC': cookie_data['spc_ec']
+                        }
+                        
+                        headers = {
+                            'User-Agent': cookie_data['user_agent'],
+                            'Referer': f'https://live.shopee.co.id/share?from=live&session={session_id}',
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/plain, */*',
+                            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Origin': 'https://live.shopee.co.id',
+                            'Sec-Fetch-Dest': 'empty',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'same-origin'
+                        }
+                        
+                        # Try POST
+                        response = requests.post(endpoint, cookies=cookies, headers=headers, timeout=10)
+                        
+                        self.log(f"  POST {endpoint.split('/')[-1]}: {response.status_code}")
+                        
+                        if response.status_code == 200:
+                            self.log(f"  ✅ API SUCCESS: {response.text[:100]}...")
+                            success_count += 1
+                            break
+                        
+                        # Try GET if POST fails
+                        response = requests.get(endpoint, cookies=cookies, headers=headers, timeout=10)
+                        
+                        self.log(f"  GET {endpoint.split('/')[-1]}: {response.status_code}")
+                        
+                        if response.status_code == 200:
+                            self.log(f"  ✅ API SUCCESS: {response.text[:100]}...")
+                            success_count += 1
+                            break
+                            
+                    except Exception as e:
+                        self.log(f"  ⚠️ Endpoint {endpoint.split('/')[-1]} error: {e}")
+                        continue
+                        
+            except Exception as e:
+                self.log(f"❌ Account {cookie_data['account_id']} error: {e}")
+            
+            time.sleep(random.uniform(2, 5))
+        
+        self.log(f"\n🎯 PURE API RESULTS: {success_count}/{len(self.verified_cookies)} successful")
+        return success_count
+    
+    def create_headless_viewer(self, cookie_data, viewer_index):
+        """Create headless viewer untuk pure API + minimal browser"""
+        driver = None
+        try:
+            self.log(f"[NETWORK {viewer_index}] 🌐 Starting network interception mode...")
+            
+            # Minimal headless Chrome
+            chrome_options = Options()
+            chrome_options.add_argument('--headless=new')  # New headless mode
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--disable-web-security')
+            chrome_options.add_argument('--disable-logging')
+            chrome_options.add_argument('--log-level=3')
+            chrome_options.add_argument('--silent')
+            chrome_options.add_argument(f'--user-agent={cookie_data["user_agent"]}')
+            
+            # Enable performance logging
+            caps = DesiredCapabilities.CHROME
+            caps['goog:loggingPrefs'] = {'performance': 'ALL'}
+            
+            # Simple profile
+            profile_dir = os.path.abspath(os.path.join('bot-core', 'sessions', 'network', f'network_{viewer_index}'))
+            os.makedirs(profile_dir, exist_ok=True)
+            chrome_options.add_argument(f'--user-data-dir={profile_dir}')
+            
+            # Create driver
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options, desired_capabilities=caps)
+            driver.set_page_load_timeout(20)
+            
+            # Enable network domain for DevTools
+            driver.execute_cdp_cmd('Network.enable', {})
+            driver.execute_cdp_cmd('Runtime.enable', {})
+            
+            # Go to Shopee and set cookies
+            self.log(f"[NETWORK {viewer_index}] 🛒 Setting up network session...")
+            driver.get("https://shopee.co.id")
+            time.sleep(2)
+            
+            # Add cookies
+            for name, value in [
+                ('SPC_F', cookie_data['spc_f']),
+                ('SPC_U', cookie_data['spc_u']),
+                ('SPC_ST', cookie_data['spc_st']),
+                ('SPC_EC', cookie_data['spc_ec'])
+            ]:
+                try:
+                    driver.add_cookie({
+                        'name': name,
+                        'value': value,
+                        'domain': '.shopee.co.id',
+                        'path': '/'
+                    })
+                except:
+                    pass
+            
+            # Test direct API call using browser context
+            self.log(f"[NETWORK {viewer_index}] 📡 Testing API within browser context...")
+            
+            api_result = driver.execute_script(f"""
+                return fetch('https://live.shopee.co.id/api/v1/session/{self.session_id}/joinv2', {{
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {{
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }}
+                }}).then(response => {{
+                    return {{
+                        status: response.status,
+                        ok: response.ok,
+                        url: response.url
+                    }};
+                }}).catch(error => {{
+                    return {{
+                        error: error.message
+                    }};
+                }});
+            """)
+            
+            self.log(f"[NETWORK {viewer_index}] API Result: {api_result}")
+            
+            # Now navigate to live page
+            live_url = f"https://live.shopee.co.id/share?from=live&session={self.session_id}"
+            self.log(f"[NETWORK {viewer_index}] 📺 Navigating to live...")
+            
+            driver.get(live_url)
+            time.sleep(5)
+            
+            # Check result
+            current_url = driver.current_url
+            
+            # Get network logs
+            logs = driver.get_log('performance')
+            network_events = []
+            for log in logs[-10:]:  # Last 10 network events
+                message = json.loads(log['message'])
+                if message['message']['method'] == 'Network.responseReceived':
+                    network_events.append(message['message']['params']['response']['url'])
+            
+            self.log(f"[NETWORK {viewer_index}] Final URL: {current_url}")
+            self.log(f"[NETWORK {viewer_index}] Network events: {len(network_events)}")
+            
+            if 'live.shopee.co.id' in current_url and 'login' not in current_url:
+                self.log(f"[NETWORK {viewer_index}] ✅ NETWORK SUCCESS!")
+                
+                self.active_viewers.append({
+                    'driver': driver,
+                    'viewer_id': viewer_index,
+                    'type': 'network_headless',
+                    'account_id': cookie_data['account_id'],
+                    'status': 'active',
+                    'api_result': api_result,
+                    'final_url': current_url
+                })
+                return True
+            else:
+                self.log(f"[NETWORK {viewer_index}] ❌ REDIRECT/BLOCKED")
+                driver.quit()
+                return False
+                
+        except Exception as e:
+            self.log(f"[NETWORK {viewer_index}] 💥 ERROR: {e}")
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+            return False
+    
+    def start_network_bot(self, session_id, target_viewers=3):
+        """Start network interceptor bot"""
+        self.session_id = session_id
+        
+        self.log("=" * 60)
+        self.log("🌐 NETWORK INTERCEPTOR SHOPEE BOT")
+        self.log("Advanced Network Bypass Technology")
+        self.log("=" * 60)
+        self.log(f"🎯 Session: {session_id}")
+        self.log(f"🌐 Target: {target_viewers} network viewers")
+        self.log("=" * 60)
+        
+        if not self.verified_cookies:
+            self.log("❌ No cookies available!")
+            return
+        
+        # Test 1: Pure API
+        self.log("\n🧪 PHASE 1: PURE API TEST")
+        api_success = self.test_pure_api_method(session_id)
+        
+        # Test 2: Network + Browser
+        self.log("\n🌐 PHASE 2: NETWORK + BROWSER TEST")
+        
+        browser_success = 0
+        cookies_to_use = min(target_viewers, len(self.verified_cookies))
+        
+        for i in range(cookies_to_use):
+            self.log(f"\n--- NETWORK VIEWER {i+1}/{cookies_to_use} ---")
+            
+            if self.create_headless_viewer(self.verified_cookies[i], i + 1):
+                browser_success += 1
+            
+            time.sleep(random.uniform(8, 15))
+        
+        # Final results
+        self.log("\n" + "=" * 60)
+        self.log("🌐 NETWORK BOT FINAL RESULTS")
+        self.log(f"📡 API Success: {api_success}/{len(self.verified_cookies)}")
+        self.log(f"🌐 Browser Success: {browser_success}/{cookies_to_use}")
+        self.log(f"🎯 Active Viewers: {len(self.active_viewers)}")
+        self.log("=" * 60)
+        
+        if len(self.active_viewers) > 0:
+            self.log("\n💚 Network viewers active! Press Ctrl+C to stop...")
+            try:
+                while True:
+                    time.sleep(30)
+                    alive = 0
+                    for viewer in self.active_viewers[:]:
+                        try:
+                            viewer['driver'].current_url
+                            alive += 1
+                        except:
+                            self.active_viewers.remove(viewer)
+                    self.log(f"💚 Network Health: {alive} viewers alive")
+            except KeyboardInterrupt:
+                self.log("\n🛑 Stopping network bot...")
+                for viewer in self.active_viewers:
+                    try:
+                        viewer['driver'].quit()
+                    except:
+                        pass
+        else:
+            self.log("❌ No active network viewers!")
+
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) >= 3:
+        session_id = sys.argv[1]
+        viewer_count = int(sys.argv[2])
+        
+        print("🌐" + "=" * 60)
+        print("       NETWORK INTERCEPTOR BOT - Advanced Mode")
+        print("🌐" + "=" * 60)
+        
+        bot = NetworkInterceptorBot()
+        bot.start_network_bot(session_id, viewer_count)
+    else:
+        session_id = input("Session ID: ").strip()
+        viewer_count = int(input("Jumlah network viewers: ").strip())
+        
+        bot = NetworkInterceptorBot()
+        bot.start_network_bot(session_id, viewer_count)
+
+import time
+import random
+import json
+import os
+import requests
 import threading
 from datetime import datetime, timedelta
 from selenium import webdriver
