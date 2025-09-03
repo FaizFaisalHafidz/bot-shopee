@@ -10,6 +10,7 @@ import json
 import os
 import threading
 import requests
+import csv
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -22,11 +23,49 @@ class NeoShopeeBot:
         self.active_viewers = []
         self.session_id = None
         self.target_viewers = 10
+        self.verified_cookies = []
         
         # Setup logging
         log_dir = os.path.join('bot-core', 'logs')
         os.makedirs(log_dir, exist_ok=True)
         self.log_file = os.path.join(log_dir, f'neo_bot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        
+        # Load verified cookies
+        self.load_verified_cookies()
+        
+    def load_verified_cookies(self):
+        """Load verified cookies from CSV file"""
+        csv_path = os.path.join('bot-core', 'accounts', 'verified_cookies.csv')
+        if not os.path.exists(csv_path):
+            self.log("❌ verified_cookies.csv tidak ditemukan!")
+            return
+            
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row['status'] == 'active':
+                        self.verified_cookies.append({
+                            'account_id': row['account_id'],
+                            'spc_f': row['spc_f'],
+                            'spc_u': row['spc_u'], 
+                            'spc_st': row['spc_st'],
+                            'spc_ec': row['spc_ec'],
+                            'device_id': row['device_id'],
+                            'user_agent': row['user_agent']
+                        })
+            
+            self.log(f"✅ Loaded {len(self.verified_cookies)} verified cookies")
+        except Exception as e:
+            self.log(f"❌ Error loading cookies: {e}")
+    
+    def get_random_cookies(self):
+        """Get random verified cookies"""
+        if not self.verified_cookies:
+            self.log("❌ No verified cookies available!")
+            return None
+            
+        return random.choice(self.verified_cookies)
         
     def log(self, message):
         """Log message to console and file"""
@@ -73,78 +112,72 @@ class NeoShopeeBot:
         
         return chrome_options
     
-    def harvest_cookies(self, count=3):
-        """Harvest cookies dari Shopee"""
-        self.log(f"🔥 HARVEST COOKIES - Target: {count}")
+    def create_session_cookies(self, count=3):
+        """Create session cookies using verified cookies"""
+        self.log(f"🔥 CREATE SESSION COOKIES - Target: {count}")
         
-        for i in range(count):
-            driver = None
-            try:
-                self.log(f"[HARVEST {i+1}] Membuat Chrome...")
-                
-                chrome_options = self.create_chrome_options(f"harvest_{i}")
-                service = Service(ChromeDriverManager().install())
-                driver = webdriver.Chrome(service=service, options=chrome_options)
-                
-                # Akses Shopee
-                self.log(f"[HARVEST {i+1}] Akses Shopee...")
-                driver.get("https://shopee.co.id")
-                time.sleep(5)
-                
-                # Akses live URL
-                live_url = f"https://live.shopee.co.id/share?from=live&session={self.session_id}&share_user_id=266236471&stm_medium=referral&stm_source=rw&uls_trackid=53jp7veh00m4&viewer={i+1}#copy_link"
-                
-                self.log(f"[HARVEST {i+1}] Akses Live...")
-                driver.get(live_url)
-                time.sleep(8)
-                
-                # Get cookies
-                cookies = driver.get_cookies()
-                cookie_dict = {}
-                for cookie in cookies:
-                    cookie_dict[cookie['name']] = cookie['value']
-                
-                user_agent = driver.execute_script("return navigator.userAgent;")
-                
-                if len(cookie_dict) > 3:
-                    self.session_cookies.append({
-                        'cookies': cookie_dict,
-                        'user_agent': user_agent,
-                        'harvested_at': datetime.now(),
-                        'is_valid': True
-                    })
-                    self.log(f"[HARVEST {i+1}] ✅ Berhasil ({len(cookie_dict)} cookies)")
-                else:
-                    self.log(f"[HARVEST {i+1}] ❌ Gagal")
-                
-                driver.quit()
-                time.sleep(3)
-                
-            except Exception as e:
-                self.log(f"[HARVEST {i+1}] ❌ Error: {e}")
-                if driver:
-                    try:
-                        driver.quit()
-                    except:
-                        pass
+        if not self.verified_cookies:
+            self.log("❌ No verified cookies available!")
+            return False
         
-        valid_cookies = len([c for c in self.session_cookies if c['is_valid']])
-        self.log(f"✅ HARVEST SELESAI - {valid_cookies}/{count}")
-        return valid_cookies > 0
+        cookies_to_create = min(count, len(self.verified_cookies))
+        
+        for i in range(cookies_to_create):
+            verified_cookie = self.verified_cookies[i]
+            
+            # Create session cookie from verified cookie
+            session_cookie = {
+                'cookies': {
+                    'SPC_F': verified_cookie['spc_f'],
+                    'SPC_U': verified_cookie['spc_u'],
+                    'SPC_ST': verified_cookie['spc_st'],
+                    'SPC_EC': verified_cookie['spc_ec']
+                },
+                'user_agent': verified_cookie['user_agent'],
+                'device_id': verified_cookie['device_id'],
+                'account_id': verified_cookie['account_id'],
+                'created_at': datetime.now(),
+                'is_valid': True
+            }
+            
+            self.session_cookies.append(session_cookie)
+            self.log(f"✅ Cookie {verified_cookie['account_id']} ready")
+        
+        self.log(f"✅ SESSION COOKIES READY - {len(self.session_cookies)}/{count}")
+        return len(self.session_cookies) > 0
     
     def api_join(self, cookie_data, viewer_index):
-        """Join via API"""
+        """Join via API dengan headers lengkap"""
         try:
             self.log(f"[API {viewer_index}] Join via API...")
+            
+            # Generate device fingerprint
+            device_id = cookie_data.get('device_id', f"{random.randint(10000000, 99999999):08x}-{random.randint(1000, 9999):04x}-{random.randint(1000, 9999):04x}-{random.randint(1000, 9999):04x}-{random.randint(100000000000, 999999999999):012x}")
             
             headers = {
                 'authority': 'live.shopee.co.id',
                 'accept': 'application/json, text/plain, */*',
-                'accept-language': 'id,en-US;q=0.9,en;q=0.8',
+                'accept-encoding': 'gzip, deflate, br, zstd',
+                'accept-language': 'en-US,en;q=0.9',
+                'af-ac-enc-dat': f"{random.randint(100000000000000, 999999999999999):015x}",
+                'af-ac-enc-sz-token': f"{random.choice(['4ajkrCY0SKLRm9EuH+1uRw==', 'uk4Hbgg71cRKXlHTWB4YbQ==', 'UuTCi16ItZXkHqEOMNTK8g=='])}|{random.choice(['3hbtI5BMdrA5g9vMmeo+sizjKGKL0aeLIM/C5/CSOM6KHT9WE8zR3SlBrTEo+OCQj3f8TdVVQWjYsdiM7xs=', '7lNAw8wYb8dgorY0uJwaecHjfHRyhAZrAiBiOi/7DjPUuzryCvTejlEN/7m0BG0FssEHR6pu3aRssuWKIv8=', 'mXSHUtsfEVEdanhXxWpfsN4LQADLt7BSXbjYmdBS926l6fefcC/UW2JW05IgL4C0G4KjOtlU2gJ/M1/ZsNI='])}|{random.choice(['AUt44MAmsawsEhs/', 'BSpU08C6165oARr2', 'c+xuAErhQ+2oZkoC'])}|08|3",
+                'client-info': f'os=2;platform=9;scene_id=17;language=id;device_id={device_id}',
+                'content-length': '55',
                 'content-type': 'application/json',
                 'origin': 'https://live.shopee.co.id',
-                'referer': f'https://live.shopee.co.id/share?from=live&session={self.session_id}&share_user_id=266236471&stm_medium=referral&stm_source=rw&uls_trackid=53jp7veh00m4&viewer={viewer_index}',
-                'user-agent': cookie_data['user_agent']
+                'priority': 'u=1, i',
+                'referer': f'https://live.shopee.co.id/share?from=live&session={self.session_id}&share_user_id=266236471&stm_medium=referral&stm_source=rw&uls_trackid=53jtgs0g03oc&viewer={viewer_index}&in=1',
+                'sec-ch-ua': '"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'user-agent': cookie_data['user_agent'],
+                'x-livestreaming-auth': f"ls_web_v1_30001_{int(time.time())}_{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}|{random.choice(['c2pRbToV3Ry13OOOIqDwugcOQsYykzv5Pspf320HPj0=', '/HO6U/zDsLabxbzJGnhi3N28eDlllfhjqDT1Q/YwbdU=', 'pRD+tYLmzTxCfFE0a7j26kUl/Gnchvi/p0CDLE34kYE='])}",
+                'x-livestreaming-source': 'shopee',
+                'x-sap-ri': f"{random.randint(10**15, 9*10**15):016x}{random.randint(10**15, 9*10**15):016x}{random.randint(10**7, 9*10**7):08x}",
+                'x-sz-sdk-version': '1.10.7'
             }
             
             payload = {"source": "web"}
@@ -162,6 +195,8 @@ class NeoShopeeBot:
                 return True
             else:
                 self.log(f"[API {viewer_index}] ❌ Gagal: {response.status_code}")
+                if response.text:
+                    self.log(f"[API {viewer_index}] Response: {response.text[:200]}")
                 return False
                 
         except Exception as e:
@@ -241,7 +276,7 @@ class NeoShopeeBot:
         
         # Fase 1: Harvest cookies
         self.log("\\n🔥 FASE 1: HARVEST COOKIES")
-        if not self.harvest_cookies(min(5, target_viewers)):
+        if not self.create_session_cookies(min(5, target_viewers)):
             self.log("❌ Gagal harvest cookies!")
             return
         
