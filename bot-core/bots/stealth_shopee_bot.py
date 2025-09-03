@@ -77,7 +77,7 @@ class StealthShopeeBot:
             pass
     
     def create_stealth_chrome_options(self, profile_index, fingerprint):
-        """Create ultra-stealth Chrome options"""
+        """Create ultra-stealth Chrome options - QUICK FIX VERSION"""
         chrome_options = Options()
         
         # Essential stealth arguments
@@ -87,25 +87,27 @@ class StealthShopeeBot:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # Anti-detection
+        # QUICK FIX: Network stability
         chrome_options.add_argument('--disable-web-security')
         chrome_options.add_argument('--disable-features=VizDisplayCompositor')
-        chrome_options.add_argument('--disable-ipc-flooding-protection')
-        chrome_options.add_argument('--disable-renderer-backgrounding')
-        chrome_options.add_argument('--disable-backgrounding-occluded-windows')
-        chrome_options.add_argument('--disable-client-side-phishing-detection')
+        chrome_options.add_argument('--no-proxy-server')
+        chrome_options.add_argument('--disable-background-networking')
+        chrome_options.add_argument('--disable-default-apps')
+        chrome_options.add_argument('--disable-sync')
         
-        # Minimal resource usage
+        # QUICK FIX: Reduced resource usage
         chrome_options.add_argument('--disable-logging')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument('--silent')
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-plugins')
         
         # Custom user agent per viewer
         chrome_options.add_argument(f'--user-agent={fingerprint["user_agent"]}')
         
-        # Unique profile directory
-        profile_dir = os.path.abspath(os.path.join('bot-core', 'sessions', 'stealth', f'profile_{profile_index}_{random.randint(10000,99999)}'))
+        # QUICK FIX: Simpler profile directory
+        profile_dir = os.path.abspath(os.path.join('bot-core', 'sessions', 'viewers', f'viewer_stealth_{profile_index}'))
         os.makedirs(profile_dir, exist_ok=True)
         chrome_options.add_argument(f'--user-data-dir={profile_dir}')
         
@@ -172,7 +174,7 @@ class StealthShopeeBot:
         return delay
     
     def create_stealth_browser_viewer(self, cookie_data, viewer_index):
-        """Create stealth browser viewer dengan full anti-detection"""
+        """QUICK FIX: Simplified stealth browser creation"""
         driver = None
         try:
             self.log(f"[STEALTH {viewer_index}] 🥷 Starting stealth mode...")
@@ -186,20 +188,19 @@ class StealthShopeeBot:
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
             
+            # QUICK FIX: Set timeouts
+            driver.set_page_load_timeout(30)
+            driver.implicitly_wait(10)
+            
             # Apply stealth scripts
             self.apply_stealth_scripts(driver, fingerprint)
             
-            # Phase 1: Visit Google first (simulate normal browsing)
-            self.log(f"[STEALTH {viewer_index}] 🔍 Simulating normal browsing...")
-            driver.get("https://www.google.com")
-            self.human_like_delay(2, 4)
-            
-            # Phase 2: Visit Shopee main page
-            self.log(f"[STEALTH {viewer_index}] 🛒 Visiting Shopee...")
+            # QUICK FIX: Direct to Shopee instead of Google first
+            self.log(f"[STEALTH {viewer_index}] 🛒 Direct to Shopee...")
             driver.get("https://shopee.co.id")
-            self.human_like_delay(3, 6)
+            time.sleep(3)
             
-            # Phase 3: Clear and inject cookies
+            # Inject cookies
             driver.delete_all_cookies()
             
             essential_cookies = [
@@ -217,42 +218,79 @@ class StealthShopeeBot:
                         'domain': '.shopee.co.id',
                         'path': '/'
                     })
+                    self.log(f"[STEALTH {viewer_index}] ✅ Cookie {cookie['name']} injected")
                 except Exception as e:
                     self.log(f"[STEALTH {viewer_index}] ⚠️ Cookie {cookie['name']}: {e}")
             
-            # Phase 4: Refresh with cookies
+            # QUICK FIX: Refresh with cookies
+            self.log(f"[STEALTH {viewer_index}] 🔄 Refreshing with cookies...")
             driver.refresh()
-            self.human_like_delay(3, 5)
+            time.sleep(5)
             
-            # Phase 5: Navigate to live with simple URL
-            live_url = f"https://live.shopee.co.id/share?from=live&session={self.session_id}"
-            self.log(f"[STEALTH {viewer_index}] 📺 Opening live: {live_url}")
+            # QUICK FIX: Try direct API join first
+            session_id = self.session_id
+            join_url = f"https://live.shopee.co.id/api/v1/session/{session_id}/joinv2"
+            
+            self.log(f"[STEALTH {viewer_index}] 📡 Testing API join...")
+            
+            # Get cookies for API request
+            cookies = {}
+            for cookie in driver.get_cookies():
+                cookies[cookie['name']] = cookie['value']
+            
+            try:
+                response = requests.post(join_url, cookies=cookies, timeout=10)
+                self.log(f"[STEALTH {viewer_index}] API Response: {response.status_code}")
+                
+                if response.status_code == 200:
+                    self.log(f"[STEALTH {viewer_index}] 🎯 API JOIN SUCCESS!")
+                    
+                    # Now visit the live page
+                    live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
+                    self.log(f"[STEALTH {viewer_index}] 📺 Opening live: {live_url}")
+                    
+                    driver.get(live_url)
+                    time.sleep(5)
+                    
+                    # Check success
+                    current_url = driver.current_url
+                    if 'live.shopee.co.id' in current_url and 'login' not in current_url:
+                        self.log(f"[STEALTH {viewer_index}] ✅ STEALTH SUCCESS!")
+                        self.log(f"[STEALTH {viewer_index}] Final URL: {current_url}")
+                        
+                        # Add to active viewers
+                        self.active_viewers.append({
+                            'driver': driver,
+                            'viewer_id': viewer_index,
+                            'type': 'stealth_browser',
+                            'status': 'active',
+                            'account_id': cookie_data.get('account_id', f'stealth_{viewer_index}'),
+                            'device_id': fingerprint['device_id'],
+                            'created_at': datetime.now()
+                        })
+                        
+                        return True
+                    else:
+                        self.log(f"[STEALTH {viewer_index}] ❌ LOGIN REDIRECT: {current_url}")
+                        
+                else:
+                    self.log(f"[STEALTH {viewer_index}] ❌ API Failed: {response.status_code}")
+                    
+            except Exception as e:
+                self.log(f"[STEALTH {viewer_index}] ❌ API Error: {e}")
+            
+            # If API failed, try browser method
+            live_url = f"https://live.shopee.co.id/share?from=live&session={session_id}"
+            self.log(f"[STEALTH {viewer_index}] � Fallback browser: {live_url}")
             
             driver.get(live_url)
-            self.human_like_delay(5, 10)
+            time.sleep(7)
             
-            # Phase 6: Check for success/blocks
             current_url = driver.current_url
-            page_source = driver.page_source.lower()
-            
-            # Check for anti-bot patterns
-            blocked_patterns = ['captcha', 'verify', 'anti_bot', 'robot', 'blocked']
-            if any(pattern in current_url.lower() for pattern in blocked_patterns):
-                self.log(f"[STEALTH {viewer_index}] 🚫 BLOCKED: {current_url}")
-                driver.quit()
-                return False
-            
-            if any(pattern in page_source for pattern in blocked_patterns):
-                self.log(f"[STEALTH {viewer_index}] 🚫 CONTENT BLOCKED")
-                driver.quit()
-                return False
-            
-            # Success check
             if 'live.shopee.co.id' in current_url and 'login' not in current_url:
-                self.log(f"[STEALTH {viewer_index}] ✅ STEALTH SUCCESS!")
+                self.log(f"[STEALTH {viewer_index}] ✅ BROWSER SUCCESS!")
                 self.log(f"[STEALTH {viewer_index}] Final URL: {current_url}")
                 
-                # Add to active viewers
                 self.active_viewers.append({
                     'driver': driver,
                     'viewer_id': viewer_index,
@@ -265,12 +303,12 @@ class StealthShopeeBot:
                 
                 return True
             else:
-                self.log(f"[STEALTH {viewer_index}] ❌ LOGIN REDIRECT")
+                self.log(f"[STEALTH {viewer_index}] ❌ FAILED: {current_url}")
                 driver.quit()
                 return False
                 
         except Exception as e:
-            self.log(f"[STEALTH {viewer_index}] 💥 ERROR: {e}")
+            self.log(f"[STEALTH {viewer_index}] 💥 CRITICAL ERROR: {str(e)[:100]}...")
             if driver:
                 try:
                     driver.quit()
